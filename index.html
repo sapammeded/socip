@@ -271,56 +271,5 @@
 
 <!-- ============== END MANAGEMENT ENGINE ============== -->
 
-<script src="app.js"></script>
-<!-- SOCIP AI PROMPT ENGINE — provider-neutral, no API key -->
-<section id="socipAiPromptEngine" class="socip-ai-engine" aria-label="SOCIP AI Prompt Engine">
-  <div class="socip-ai-head">
-    <div>
-      <div class="socip-ai-kicker">SOCIP™ INTELLIGENCE</div>
-      <h2>AI Prompt Engine</h2>
-      <p>Gunakan data SOCIP untuk membuat prompt siap-copy ke AI mana pun. Tanpa API key.</p>
-    </div>
-    <button type="button" id="socipAiToggle" class="socip-ai-btn secondary">Hide</button>
-  </div>
-
-  <div id="socipAiBody">
-    <div class="socip-ai-grid">
-      <label>Mode
-        <select id="socipAiMode">
-          <option value="finding">Analyze Finding</option>
-          <option value="incident">Analyze Incident</option>
-          <option value="risk">Analyze Risk</option>
-          <option value="patrol">Analyze Patrol</option>
-          <option value="management">Management Brief</option>
-          <option value="custom">Custom Security Analysis</option>
-        </select>
-      </label>
-      <label>Context tambahan
-        <input id="socipAiExtra" placeholder="Opsional: fokus analisis / pertanyaan khusus">
-      </label>
-    </div>
-
-    <div class="socip-ai-actions">
-      <button type="button" id="socipAiGenerate" class="socip-ai-btn primary">🧠 Generate AI Prompt</button>
-      <button type="button" id="socipAiCopy" class="socip-ai-btn secondary">📋 Copy Prompt</button>
-    </div>
-
-    <label class="socip-ai-block">Prompt siap copy
-      <textarea id="socipAiPrompt" rows="12" spellcheck="false" placeholder="Klik Generate AI Prompt..."></textarea>
-    </label>
-
-    <label class="socip-ai-block">Paste hasil AI di sini
-      <textarea id="socipAiResponse" rows="8" spellcheck="false" placeholder="Paste hasil dari Gemini, ChatGPT, Claude, atau AI lain..."></textarea>
-    </label>
-
-    <div class="socip-ai-actions">
-      <button type="button" id="socipAiProcess" class="socip-ai-btn primary">⚡ Process AI Response</button>
-      <button type="button" id="socipAiClear" class="socip-ai-btn secondary">Clear</button>
-    </div>
-
-    <div id="socipAiResult" class="socip-ai-result" hidden></div>
-  </div>
-</section>
-
-</body>
+<script src="app.js"></script></body>
 </html>

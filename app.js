@@ -92,3 +92,130 @@
     executeOriginalScripts();
   });
 })();
+
+
+/* ================================================================
+   SOCIP™ AI PROMPT ENGINE
+   Provider-neutral: NO API, NO API KEY.
+   Builds context from data already present in the application.
+   ================================================================ */
+(function(){
+  'use strict';
+  const $ = id => document.getElementById(id);
+  const escText = v => String(v == null ? '' : v);
+
+  function safeObject(name){
+    try { return (typeof window[name] !== 'undefined' && window[name]) ? window[name] : {}; }
+    catch(e){ return {}; }
+  }
+  function compact(obj, depth=0){
+    if(depth>4) return '[max-depth]';
+    if(obj == null) return null;
+    if(typeof obj !== 'object') return obj;
+    if(Array.isArray(obj)) return obj.slice(0,200).map(x=>compact(x,depth+1));
+    const out={};
+    Object.keys(obj).slice(0,300).forEach(k=>out[k]=compact(obj[k],depth+1));
+    return out;
+  }
+
+  function collectContext(mode){
+    const ctx = {
+      platform:'SOCIP™ — Security Operations Command & Intelligence Platform',
+      generatedAt:new Date().toISOString(),
+      mode,
+      sourceRule:'Use only supplied SOCIP data. Do not invent facts.'
+    };
+    const names = {
+      finding:['incidentsCache','incidents'],
+      incident:['incidentsCache','incidents'],
+      risk:['risksCache','risks'],
+      patrol:['patrolCache','liveCache','listOrder','alertsCache'],
+      management:['patrolCache','liveCache','listOrder','alertsCache','incidentsCache','risksCache'],
+      custom:['patrolCache','liveCache','listOrder','alertsCache','incidentsCache','risksCache']
+    };
+    (names[mode]||names.custom).forEach(n=>{
+      const v=safeObject(n);
+      if(Object.keys(v).length) ctx[n]=compact(v);
+    });
+    return ctx;
+  }
+
+  function buildPrompt(){
+    const mode=$('socipAiMode')?.value||'custom';
+    const extra=($('socipAiExtra')?.value||'').trim();
+    const context=collectContext(mode);
+    const modeInstruction={
+      finding:'Analyze security findings. Separate FACTS, RISK/IMPACT, ROOT CAUSE (only if supported), CORRECTIVE ACTION, VERIFICATION CRITERIA, and MANAGEMENT RECOMMENDATION.',
+      incident:'Analyze the incident. Separate FACTS, IMPACT, RESPONSE ASSESSMENT, ROOT CAUSE (only if supported), CORRECTIVE ACTION, and PREVENTION.',
+      risk:'Analyze security risk data. Identify priority, impact, contributing factors, mitigation, residual risk, and recommended controls without inventing facts.',
+      patrol:'Analyze patrol execution, checkpoint compliance, anomalies, alerts, and operational patterns. Identify priority issues and recommended actions.',
+      management:'Create an executive security brief using only the supplied SOCIP data. Highlight status, priorities, trends, overdue/open items, and recommended management actions.',
+      custom:'Perform a professional security operations analysis based only on the supplied SOCIP context.'
+    }[mode]||'Perform a professional security operations analysis based only on the supplied SOCIP context.';
+
+    return [
+      'You are a Security Operations Intelligence Analyst assisting SOCIP™.',
+      '',
+      'TASK:',
+      modeInstruction,
+      extra ? '\nADDITIONAL USER REQUEST:\n'+extra : '',
+      '',
+      'STRICT DATA GOVERNANCE:',
+      '1. Use ONLY the SOCIP context supplied below.',
+      '2. Do NOT invent names, timestamps, locations, measurements, incidents, evidence, causes, or actions.',
+      '3. Clearly separate FACT, ANALYSIS, and RECOMMENDATION.',
+      '4. If information is unavailable, write N/A.',
+      '5. Do not claim an action was completed unless the supplied data proves it.',
+      '6. Preserve the original IDs, status values, dates, and locations.',
+      '7. Return a concise professional Indonesian security-management response.',
+      '',
+      'REQUIRED OUTPUT:',
+      'FACTS:',
+      'ANALYSIS:',
+      'RISK / IMPACT:',
+      'RECOMMENDED ACTION:',
+      'VERIFICATION CRITERIA:',
+      'MANAGEMENT RECOMMENDATION:',
+      '',
+      'SOCIP CONTEXT (JSON):',
+      JSON.stringify(context,null,2)
+    ].join('\n');
+  }
+
+  function processResponse(){
+    const raw=($('socipAiResponse')?.value||'').trim();
+    if(!raw){ $('socipAiResult').hidden=false; $('socipAiResult').textContent='Belum ada hasil AI untuk diproses.'; return; }
+    const labels=['FACTS:','ANALYSIS:','RISK / IMPACT:','RECOMMENDED ACTION:','VERIFICATION CRITERIA:','MANAGEMENT RECOMMENDATION:'];
+    const lines=raw.split(/\r?\n/);
+    const sections=[]; let current=null;
+    lines.forEach(line=>{
+      const hit=labels.find(x=>line.trim().toUpperCase().startsWith(x));
+      if(hit){ current=hit.slice(0,-1); sections.push([current, line.slice(hit.length).trim()]); }
+      else if(current && line.trim()){ sections[sections.length-1][1]+=(sections[sections.length-1][1]?' ':'')+line.trim(); }
+    });
+    const box=$('socipAiResult'); box.hidden=false;
+    box.textContent=sections.length
+      ? sections.map(x=>x[0]+'\n'+x[1]).join('\n\n')
+      : 'AI response diterima. Format heading SOCIP belum terdeteksi, sehingga hasil ditampilkan sebagai raw response:\n\n'+raw;
+  }
+
+  $('socipAiGenerate')?.addEventListener('click',()=>{
+    $('socipAiPrompt').value=buildPrompt();
+    $('socipAiPrompt').focus();
+  });
+  $('socipAiCopy')?.addEventListener('click',async()=>{
+    const p=$('socipAiPrompt').value;
+    if(!p) return;
+    try{ await navigator.clipboard.writeText(p); $('socipAiCopy').textContent='✅ Copied'; setTimeout(()=>$('socipAiCopy').textContent='📋 Copy Prompt',1200); }
+    catch(e){ $('socipAiPrompt').select(); document.execCommand('copy'); }
+  });
+  $('socipAiProcess')?.addEventListener('click',processResponse);
+  $('socipAiClear')?.addEventListener('click',()=>{
+    $('socipAiPrompt').value=''; $('socipAiResponse').value=''; $('socipAiResult').hidden=true; $('socipAiResult').textContent='';
+  });
+  $('socipAiToggle')?.addEventListener('click',()=>{
+    const body=$('socipAiBody'), hidden=body.style.display==='none';
+    body.style.display=hidden?'':'none';
+    $('socipAiToggle').textContent=hidden?'Hide':'Show';
+  });
+})();

@@ -1,0 +1,366 @@
+/* SOCIP™ Modular Architecture — extracted from commandcenter_FINAL_v17_MbahPri.html */
+
+:root{
+  --bg:#05060a; --panel:#07101a; --card:#0b1220; --muted:#9aa4b2; --accent:#00e6ff;
+  --cyber-green:#00ff88; --cyber-red:#ff0055; --cyber-blue:#0099ff; --cyber-purple:#aa00ff;
+}
+*{box-sizing:border-box}
+html,body{width:100%;max-width:100%;overflow-x:hidden}
+body{margin:0;font-family:'Courier New', monospace, system-ui;background:linear-gradient(180deg,#02040a,#07101a);color:#e6f7ff}
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px;background:linear-gradient(90deg,#041023,#081428);border-bottom:1px solid rgba(0,230,255,0.1);position:relative;overflow:hidden;min-width:0}
+.topbar>.brand{min-width:0;max-width:55%;overflow-wrap:anywhere}
+.topbar>.row{min-width:0;flex-wrap:wrap;justify-content:flex-end}
+.topbar::before{content:'';position:absolute;top:0;left:0;right:0;bottom:0;background:linear-gradient(90deg, transparent, rgba(0,255,136,0.05), transparent);animation:scanline 3s linear infinite}
+@keyframes scanline{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
+.brand{font-weight:700;color:var(--cyber-green);text-shadow:0 0 10px rgba(0,255,136,0.5)}
+.brand::before{content:'>> '}
+.brand::after{content:' <<'}
+.container{display:grid;grid-template-columns:380px 1fr;height:calc(100vh - 56px);gap:12px;padding:12px}
+.panel{background:linear-gradient(180deg,var(--panel),#041018);border-radius:4px;padding:10px;overflow:auto;border:1px solid rgba(0,230,255,0.1);box-shadow:0 0 15px rgba(0,0,0,0.5)}
+.controls{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+.btn{padding:8px 10px;border-radius:4px;border:1px solid rgba(0,230,255,0.3);background:rgba(0,0,0,0.5);color:var(--accent);cursor:pointer;font-family:'Courier New', monospace;transition:all 0.2s}
+.btn:hover{background:rgba(0,230,255,0.1);box-shadow:0 0 8px rgba(0,230,255,0.3)}
+.btn.primary{background:linear-gradient(90deg,var(--cyber-green),var(--cyber-blue));color:#001;border:none;font-weight:bold}
+.btn.danger{background:linear-gradient(90deg,var(--cyber-red),#ff3366);color:#fff;border:none}
+.row{display:flex;gap:8px;align-items:center}
+#map{height:100%;border-radius:4px;border:1px solid rgba(0,230,255,0.2)}
+.list-item{display:flex;gap:10px;align-items:center;padding:8px;border-radius:4px;margin-bottom:8px;background:linear-gradient(90deg,rgba(255,255,255,0.01),transparent);cursor:pointer;border-left:3px solid transparent;transition:all 0.2s}
+.list-item:hover{background:linear-gradient(90deg,rgba(0,230,255,0.05),transparent);border-left-color:var(--accent)}
+.list-item.online{border-left-color:var(--cyber-green)}
+.list-item.offline{border-left-color:var(--cyber-red)}
+.thumb{width:64px;height:48px;object-fit:cover;border-radius:4px;border:1px solid rgba(255,255,255,0.03);position:relative;background:linear-gradient(135deg, rgba(0,230,255,0.1), rgba(0,255,136,0.05))}
+.status-indicator{position:absolute;bottom:2px;right:2px;width:12px;height:12px;border-radius:50%;border:1px solid rgba(0,0,0,0.5)}
+.status-online{background-color:var(--cyber-green);box-shadow:0 0 5px var(--cyber-green)}
+.status-offline{background-color:var(--cyber-red);box-shadow:0 0 5px var(--cyber-red)}
+.meta{flex:1}
+.meta h4{margin:0;font-size:14px;color:var(--accent)}
+.meta p{margin:4px 0 0;font-size:12px;color:var(--muted)}
+.small{font-size:12px;color:var(--muted)}
+.chatBox{margin-top:10px;background:rgba(255,255,255,0.02);padding:8px;border-radius:4px;border:1px solid rgba(0,230,255,0.1)}
+.chatList{height:160px;overflow:auto;padding:6px;background:transparent;border-radius:4px}
+.chatRow{display:flex;gap:6px;margin-bottom:8px}
+.alertFloat{position:fixed;right:18px;bottom:18px;padding:12px 14px;background:var(--cyber-red);color:#041018;border-radius:4px;z-index:9999;font-weight:bold;border-left:4px solid #ff3366}
+.search{width:100%;padding:8px;border-radius:4px;border:1px solid rgba(0,230,255,0.2);background:rgba(0,0,0,0.25);color:var(--muted);font-family:'Courier New', monospace}
+.footer{font-size:12px;color:var(--muted);margin-top:8px}
+.tabs{display:flex;margin-bottom:10px;border-bottom:1px solid rgba(0,230,255,0.2)}
+.tab{flex:1;padding:8px;text-align:center;cursor:pointer;border-bottom:2px solid transparent}
+.tab.active{color:var(--cyber-green);border-bottom-color:var(--cyber-green)}
+.tab-content{display:none}
+.tab-content.active{display:block}
+.manual-input{margin-bottom:10px}
+.manual-input input,.manual-input select{width:100%;padding:8px;border-radius:4px;border:1px solid rgba(0,230,255,0.2);background:rgba(0,0,0,0.25);color:var(--muted);margin-bottom:8px;font-family:'Courier New', monospace}
+.manual-input .form-row{display:flex;gap:8px;margin-bottom:8px}
+.manual-input .form-row input,.manual-input .form-row select{flex:1;margin-bottom:0}
+.manual-input button{width:100%}
+
+/* ✅ DEVICE BADGE (top offset disesuaikan agar tidak menutupi SOCIP™ brand bar) */
+.device-badge {
+  position: fixed;
+  top: 84px;
+  right: 15px;
+  background: rgba(0, 0, 0, 0.85);
+  padding: 8px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  border: 1px solid rgba(0, 230, 255, 0.4);
+  backdrop-filter: blur(8px);
+  z-index: 1000;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.device-icon {
+  font-size: 14px;
+}
+
+.device-text {
+  font-weight: bold;
+  color: #00e6ff;
+}
+
+.device-detail {
+  font-size: 10px;
+  color: #9aa4b2;
+}
+
+.device-spoofed {
+  color: #ff0055;
+  font-weight: bold;
+  margin-left: 5px;
+}
+
+/* ✅ DEVICE INFO IN LIST */
+.device-info {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  color: #00ff88;
+  margin-top: 3px;
+}
+
+.device-info.spoofed {
+  color: #ff3366;
+}
+
+@media(max-width:900px){ 
+  .container{grid-template-columns:minmax(0,1fr);height:auto;min-width:0;padding:8px;gap:8px} 
+  .panel{min-width:0;max-width:100%;overflow-x:hidden}
+  #map{height:50vh;min-height:320px;max-width:100%} 
+  .device-badge {
+    top: 145px;
+    right: 10px;
+    max-width:calc(100vw - 20px);
+    padding: 6px 10px;
+    font-size: 11px;
+  }
+  .topbar{align-items:flex-start;flex-direction:column;padding:10px 12px}
+  .topbar>.brand{max-width:100%;font-size:clamp(16px,4.5vw,22px);line-height:1.35}
+  .topbar>.row{width:100%;max-width:100%;justify-content:flex-start;gap:8px;padding-left:52px;box-sizing:border-box}
+  .topbar>.row>.small{display:none}
+  .topbar>.row>#btnOpenMgmt{max-width:100%;white-space:normal}
+}
+
+
+/* ✅ Panic indicator di Command Center */
+.list-item.panic-active{
+  border-color: var(--cyber-red) !important;
+  box-shadow: 0 0 12px rgba(255,0,85,0.9) !important;
+}
+@keyframes panicBlink{
+  0%,100%{ background: rgba(255,0,85,0.10); }
+  50%{ background: rgba(255,0,85,0.35); }
+}
+
+/* ================================================================ */
+/* ✅ ADDITIVE: SECURITY OPERATIONS MANAGEMENT & COMMAND SYSTEM CSS   */
+/* Namespaced (mgmt-/kpi-/exec-/badge-/mpanel-) — tidak menimpa style */
+/* existing manapun.                                                 */
+/* ================================================================ */
+#mgmtOverlay{
+  position:fixed; inset:0; z-index:20000; display:none;
+  background:linear-gradient(180deg, rgba(2,4,10,0.98), rgba(5,8,16,0.99));
+  flex-direction:column;
+}
+.mgmt-header{
+  display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;
+  padding:12px 16px; border-bottom:1px solid rgba(0,230,255,0.15);
+  background:linear-gradient(90deg,#041023,#081428);
+}
+.mgmt-title{font-weight:700;color:var(--cyber-green);text-shadow:0 0 10px rgba(0,255,136,0.5);font-size:15px}
+.mgmt-title::before{content:'>> '}
+.mgmt-title::after{content:' <<'}
+.mgmt-header-actions{display:flex;gap:8px;flex-wrap:wrap}
+#mgmtTabs{display:flex;gap:2px;padding:0 16px;background:rgba(0,0,0,0.3);overflow-x:auto;border-bottom:1px solid rgba(0,230,255,0.1)}
+.mgmt-tab{padding:10px 14px;cursor:pointer;color:var(--muted);font-size:12px;white-space:nowrap;border-bottom:2px solid transparent;transition:all .2s}
+.mgmt-tab:hover{color:var(--accent)}
+.mgmt-tab.active{color:var(--cyber-green);border-bottom-color:var(--cyber-green)}
+.mgmt-body{flex:1;overflow:auto;padding:16px}
+.mgmt-panel{display:none}
+.mgmt-panel.active{display:block}
+.mgmt-section-title{font-weight:700;color:var(--accent);margin:18px 0 8px;font-size:13px;letter-spacing:.5px;border-left:3px solid var(--accent);padding-left:8px}
+.mgmt-section-title:first-child{margin-top:0}
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-bottom:8px}
+.kpi-card{background:linear-gradient(180deg,var(--panel),#041018);border:1px solid rgba(0,230,255,0.15);border-radius:6px;padding:10px 12px}
+.kpi-card.kpi-good{border-color:rgba(0,255,136,0.4)}
+.kpi-card.kpi-warn{border-color:rgba(255,210,63,0.5)}
+.kpi-card.kpi-bad{border-color:rgba(255,0,85,0.6);box-shadow:0 0 10px rgba(255,0,85,0.15)}
+.kpi-label{font-size:11px;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.3px}
+.kpi-value{font-size:20px;font-weight:700;color:#e6f7ff}
+.kpi-card.kpi-good .kpi-value{color:var(--cyber-green)}
+.kpi-card.kpi-warn .kpi-value{color:#ffd23f}
+.kpi-card.kpi-bad .kpi-value{color:var(--cyber-red)}
+.kpi-sub{font-size:10px;color:var(--muted);margin-top:2px}
+.exec-status-banner{display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:6px;margin-bottom:12px;border:1px solid}
+.exec-status-dot{width:16px;height:16px;border-radius:50%;flex-shrink:0}
+.exec-status-text{font-weight:700;font-size:15px}
+.exec-status-sub{font-size:11px;color:var(--muted);margin-top:2px}
+.status-GREEN{background:rgba(0,255,136,0.08);border-color:rgba(0,255,136,0.5)}
+.status-GREEN .exec-status-dot{background:var(--cyber-green);box-shadow:0 0 10px var(--cyber-green)}
+.status-GREEN .exec-status-text{color:var(--cyber-green)}
+.status-AMBER{background:rgba(255,210,63,0.08);border-color:rgba(255,210,63,0.5)}
+.status-AMBER .exec-status-dot{background:#ffd23f;box-shadow:0 0 10px #ffd23f}
+.status-AMBER .exec-status-text{color:#ffd23f}
+.status-RED{background:rgba(255,0,85,0.1);border-color:rgba(255,0,85,0.6)}
+.status-RED .exec-status-dot{background:var(--cyber-red);box-shadow:0 0 10px var(--cyber-red);animation:panicBlink 1s infinite}
+.status-RED .exec-status-text{color:var(--cyber-red)}
+.status-NA{background:rgba(154,164,178,0.08);border-color:rgba(154,164,178,0.4)}
+.status-NA .exec-status-dot{background:var(--muted)}
+.status-NA .exec-status-text{color:var(--muted)}
+.mini-list{list-style:none;margin:0;padding:0;font-size:12px}
+.mini-list li{padding:6px 8px;border-bottom:1px solid rgba(255,255,255,0.05)}
+.na{color:var(--muted);font-size:12px;padding:8px 0;font-style:italic}
+.mgmt-table{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:12px}
+.mgmt-table th{text-align:left;padding:8px 6px;color:var(--accent);border-bottom:1px solid rgba(0,230,255,0.2);font-size:11px;text-transform:uppercase}
+.mgmt-table td{padding:6px;border-bottom:1px solid rgba(255,255,255,0.04);color:#cfe6ff}
+.mgmt-table tr:hover td{background:rgba(0,230,255,0.03)}
+.rank-1{color:var(--cyber-green);font-weight:700}
+.rank-last{color:var(--cyber-red);font-weight:700}
+.badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700}
+.badge-critical{background:rgba(255,0,85,0.2);color:var(--cyber-red);border:1px solid var(--cyber-red)}
+.badge-high{background:rgba(255,152,0,0.2);color:#ff9800;border:1px solid #ff9800}
+.badge-medium{background:rgba(255,210,63,0.2);color:#ffd23f;border:1px solid #ffd23f}
+.badge-low{background:rgba(0,255,136,0.15);color:var(--cyber-green);border:1px solid var(--cyber-green)}
+.badge-na{background:rgba(154,164,178,0.15);color:var(--muted);border:1px solid rgba(154,164,178,0.4)}
+.badge-status{background:rgba(0,153,255,0.15);color:var(--cyber-blue);border:1px solid var(--cyber-blue)}
+.mgmt-form{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px;background:rgba(255,255,255,0.02);padding:12px;border-radius:6px;border:1px solid rgba(0,230,255,0.1);margin-bottom:8px}
+.mgmt-form label{display:block;font-size:10px;color:var(--muted);margin-bottom:3px;text-transform:uppercase}
+.mgmt-form input,.mgmt-form select,.mgmt-form textarea{width:100%;padding:7px;border-radius:4px;border:1px solid rgba(0,230,255,0.2);background:rgba(0,0,0,0.3);color:#e6f7ff;font-family:'Courier New',monospace;font-size:12px}
+.mgmt-form textarea{min-height:50px;resize:vertical}
+.form-actions{grid-column:1/-1;display:flex;justify-content:flex-end}
+.alert-priority-row{display:flex;gap:10px;align-items:flex-start;padding:10px;border-radius:6px;margin-bottom:6px;border-left:3px solid transparent}
+.alert-priority-row.p-critical{background:rgba(255,0,85,0.1);border-left-color:var(--cyber-red)}
+.alert-priority-row.p-high{background:rgba(255,152,0,0.08);border-left-color:#ff9800}
+.alert-priority-row.p-medium{background:rgba(255,210,63,0.08);border-left-color:#ffd23f}
+.alert-priority-row.p-low{background:rgba(0,255,136,0.06);border-left-color:var(--cyber-green)}
+.ap-title{font-weight:700;font-size:12px;color:#e6f7ff}
+.ap-meta{font-size:11px;color:var(--muted);margin-top:2px}
+@media(max-width:900px){
+  #mgmtTabs{padding:0 8px}
+  .mgmt-tab{padding:8px 10px;font-size:11px}
+  .mgmt-body{padding:10px}
+  .kpi-grid{grid-template-columns:repeat(auto-fill,minmax(130px,1fr))}
+  .mgmt-form{grid-template-columns:1fr}
+  .mgmt-header{padding:10px}
+  .mgmt-title{font-size:13px}
+}
+
+
+/* ================================================================
+   SOCIP™ v16 — GLOBAL OPERATIONS MENU
+   Hamburger menu / drawer: organized access without changing
+   existing feature logic or database paths.
+================================================================ */
+.socip-menu-trigger{
+  position:absolute;left:10px;top:50%;transform:translateY(-50%);z-index:30;
+  width:42px;height:42px;border:1px solid rgba(0,230,255,.35);
+  border-radius:8px;background:rgba(2,10,20,.92);color:var(--cyber-green);
+  font-family:'Courier New',monospace;font-size:20px;cursor:pointer;
+  box-shadow:0 0 12px rgba(0,230,255,.12);
+}
+.socip-menu-trigger:active{transform:translateY(-50%) scale(.97)}
+.socip-menu-dim{position:fixed;inset:0;z-index:29990;background:rgba(0,0,0,.58);display:none}
+.socip-menu-dim.open{display:block}
+#socipOpsMenu{
+  position:fixed;left:0;top:0;bottom:0;width:min(330px,86vw);z-index:30000;
+  transform:translateX(-105%);transition:transform .22s ease;
+  background:linear-gradient(180deg,#04111f 0%,#020812 100%);
+  border-right:1px solid rgba(0,230,255,.28);
+  box-shadow:12px 0 35px rgba(0,0,0,.55);display:flex;flex-direction:column;
+}
+#socipOpsMenu.open{transform:translateX(0)}
+.socip-menu-head{padding:18px 16px 14px;border-bottom:1px solid rgba(0,230,255,.15)}
+.socip-menu-head strong{display:block;color:var(--cyber-green);font-size:15px;letter-spacing:1px}
+.socip-menu-head span{display:block;color:var(--muted);font-size:10px;margin-top:4px;line-height:1.4}
+.socip-menu-close{position:absolute;right:10px;top:10px;background:none;border:0;color:#ff3b75;font-size:22px;cursor:pointer}
+.socip-menu-body{overflow:auto;padding:10px}
+.socip-menu-group{margin:8px 0 5px;padding:5px 8px;color:#00e6ff;font-size:10px;text-transform:uppercase;letter-spacing:1px}
+.socip-menu-item{
+  width:100%;display:flex;align-items:center;gap:10px;text-align:left;
+  padding:11px 12px;margin:3px 0;border:1px solid transparent;border-radius:7px;
+  background:rgba(255,255,255,.025);color:#d8efff;font-family:'Courier New',monospace;
+  font-size:12px;cursor:pointer;box-sizing:border-box;
+}
+.socip-menu-item:hover,.socip-menu-item:active{border-color:rgba(0,230,255,.28);background:rgba(0,230,255,.07);color:var(--cyber-green)}
+.socip-menu-item .mi{width:22px;text-align:center;font-size:15px}
+.socip-menu-status{margin-top:auto;padding:10px 12px;border-top:1px solid rgba(0,230,255,.12);font-size:10px;color:var(--muted)}
+@media(max-width:600px){
+  .socip-menu-trigger{left:8px;top:8px;width:38px;height:38px;font-size:18px}
+  .socip-menu-head{padding-top:16px}
+  .topbar{position:relative;padding-left:54px!important}
+}
+
+/* ================================================================ */
+/* ✅ SOCIP™ BRANDING — dedicated header section (additive, tidak     */
+/* mengubah struktur/fungsi existing). Statis di alur dokumen paling  */
+/* atas, bukan popup/overlay/floating, tidak menutupi map/tombol.     */
+/* ================================================================ */
+.socip-brand-bar{
+  width:100%;
+  text-align:center;
+  padding:10px 12px 9px;
+  background:linear-gradient(135deg,#02040a 0%,#07101a 100%);
+  border-bottom:1px solid rgba(0,255,136,0.15);
+  position:relative;
+}
+.socip-brand-bar::after{
+  content:'';
+  position:absolute;left:0;right:0;bottom:-1px;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(0,255,136,0.4),transparent);
+}
+.socip-name{
+  font-family:'Courier New', monospace;
+  font-size:18px;
+  font-weight:900;
+  letter-spacing:3px;
+  color:#00FF88;
+  text-shadow:0 0 8px rgba(0,255,136,0.45), 0 0 2px rgba(0,255,136,0.6);
+  line-height:1.3;
+}
+.socip-tagline{
+  font-family:'Courier New', monospace;
+  font-size:10px;
+  font-weight:600;
+  letter-spacing:1.4px;
+  color:#9AA4B2;
+  text-transform:uppercase;
+  margin-top:3px;
+  line-height:1.4;
+}
+.socip-creator{
+  font-family:'Courier New', monospace;
+  font-size:9px;
+  font-weight:600;
+  color:#00E6FF;
+  margin-top:3px;
+  letter-spacing:0.5px;
+}
+@media (max-width:600px){
+  .topbar{padding:9px 10px}
+  .topbar>.brand{font-size:17px;letter-spacing:.2px}
+  .topbar>.row{width:100%}
+  .topbar>.row>#btnOpenMgmt{width:100%;font-size:12px;padding:9px 10px}
+  .device-badge{top:145px;right:8px;max-width:calc(100vw - 16px)}
+  .socip-brand-bar{padding:9px 8px 8px}
+  .socip-name{font-size:15px;letter-spacing:2.2px;}
+  .socip-tagline{ font-size:8px; letter-spacing:0.9px; }
+  .socip-creator{ font-size:8px; }
+}
+
+/* ================================================================ */
+/* ✅ ADDITIVE: PHOTO EVIDENCE + SAVE STATUS + ADVANCE MODAL CSS      */
+/* ================================================================ */
+.photo-actions{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+.photo-actions label.btn{display:inline-block;text-align:center;user-select:none}
+.photo-preview{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:4px}
+.photo-thumb{position:relative;width:76px;height:76px}
+.photo-thumb img{width:100%;height:100%;object-fit:cover;border-radius:4px;border:1px solid rgba(0,230,255,0.3)}
+.photo-thumb .rm{position:absolute;top:-6px;right:-6px;background:var(--cyber-red);color:#fff;border-radius:50%;width:18px;height:18px;font-size:11px;line-height:17px;text-align:center;cursor:pointer;border:1px solid #041018}
+.save-status{font-size:12px;margin-top:6px;grid-column:1/-1;min-height:16px}
+.save-status.pending{color:#ffd23f}
+.save-status.success{color:var(--cyber-green)}
+.save-status.error{color:var(--cyber-red)}
+#advanceModal{position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,0.75);align-items:center;justify-content:center;display:none}
+#advanceModal .adv-box{background:#0b1622;border:1px solid rgba(0,230,255,0.3);border-radius:8px;max-width:520px;width:92%;max-height:88vh;overflow:auto;padding:16px}
+
+/* v15 usability: management registry + help + mobile table */
+.mgmt-help{font-size:11px;line-height:1.55;color:var(--muted,#8ea4b8);background:rgba(0,20,35,.55);border:1px solid rgba(0,210,255,.16);border-radius:10px;padding:10px 12px;margin:8px 0 12px}
+.mgmt-help b{color:#d8f7ff}
+.finding-filters{display:flex;gap:7px;flex-wrap:wrap;margin:8px 0 12px}
+.finding-filter{border:1px solid rgba(0,220,255,.35);background:#06121d;color:#9fc7d8;border-radius:8px;padding:8px 11px;font:inherit;font-size:11px;cursor:pointer}
+.finding-filter.active{background:linear-gradient(90deg,#00f39a,#08a8ff);color:#001018;border-color:transparent}
+.mgmt-table-wrap{width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:8px;max-width:100%}
+.mgmt-table-wrap .mgmt-table td:last-child{white-space:nowrap}
+.mgmt-table-wrap .mgmt-table td:last-child .btn{margin:2px 3px 2px 0}
+@media(max-width:700px){
+  .mgmt-table-wrap{box-shadow:inset -12px 0 16px -18px rgba(0,230,255,.7)}
+  .mgmt-table-wrap .mgmt-table{min-width:900px}
+  .mgmt-section-title{font-size:14px}
+  .finding-filter{font-size:10px;padding:7px 9px}
+}
+.mgmt-table-wrap .mgmt-table{min-width:820px}
+.danger-btn{border-color:#ff2b69!important;color:#ff6f98!important}
+.mgmt-note{font-size:10px;color:#91a8b8;margin-top:4px}
+

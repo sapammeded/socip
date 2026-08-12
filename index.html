@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+
+<html lang="id">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width,initial-scale=1" name="viewport"/>
+<title>CYBER PATROL — MONITORING SYSTEM</title>
+<!-- Leaflet -->
+<link href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" rel="stylesheet"/>
+
+<link href="style.css" rel="stylesheet"/></head>
+<body>
+<!-- ✅ SOCIP™ BRANDING (dedicated header section, bukan overlay/popup) -->
+<div class="socip-brand-bar">
+<div class="socip-name">SOCIP™</div>
+<div class="socip-tagline">Security Operations Command &amp; Intelligence Platform</div>
+<div class="socip-creator">Created By : Mbah Pri</div>
+</div>
+<!-- SOCIP™ OPERATIONS MENU -->
+<div class="socip-menu-dim" id="socipMenuDim"></div>
+<aside aria-hidden="true" id="socipOpsMenu">
+<button aria-label="Tutup menu" class="socip-menu-close" id="socipMenuClose">×</button>
+<div class="socip-menu-head">
+<strong>SOCIP™ OPERATIONS MENU</strong>
+<span>Security Operations Command &amp; Intelligence Platform</span>
+</div>
+<div class="socip-menu-body">
+<div class="socip-menu-group">PATROL OPERATIONS</div>
+<button class="socip-menu-item" data-socip-action="tab-monitor"><span class="mi">📡</span><span>Live Monitoring</span></button>
+<button class="socip-menu-item" data-socip-action="tab-manual"><span class="mi">✍️</span><span>Manual Patrol Input</span></button>
+<button class="socip-menu-item" data-socip-action="map"><span class="mi">🗺️</span><span>Live Map</span></button>
+<button class="socip-menu-item" data-socip-action="replay"><span class="mi">▶️</span><span>Patrol Replay</span></button>
+<div class="socip-menu-group">SECURITY MANAGEMENT</div>
+<button class="socip-menu-item" data-socip-action="management"><span class="mi">⚙️</span><span>Security Management</span></button>
+<button class="socip-menu-item" data-socip-action="finding"><span class="mi">📋</span><span>Incident / Finding Management</span></button>
+<button class="socip-menu-item" data-socip-action="risk"><span class="mi">⚠️</span><span>Security Risk</span></button>
+<button class="socip-menu-item" data-socip-action="alerts"><span class="mi">🚨</span><span>Alert Center</span></button>
+<div class="socip-menu-group">REPORT &amp; SYSTEM</div>
+<button class="socip-menu-item" data-socip-action="report"><span class="mi">📄</span><span>Management Report</span></button>
+<button class="socip-menu-item" data-socip-action="cleanup"><span class="mi">🧹</span><span>Deep Clean</span></button>
+</div>
+<div class="socip-menu-status">Menu dapat disembunyikan kapan saja dengan ☰ atau ×.</div>
+</aside>
+<!-- ✅ DEVICE BADGE -->
+<div class="device-badge" id="deviceBadge">
+<span class="device-icon" id="deviceIcon">💻</span>
+<div>
+<div class="device-text" id="deviceText">Loading device...</div>
+<div class="device-detail" id="deviceDetail">Detecting your device</div>
+</div>
+</div>
+<div class="topbar">
+<button aria-expanded="false" aria-label="Buka menu operasi" class="socip-menu-trigger" id="socipMenuTrigger">☰</button>
+<div class="brand">CYBER PATROL — MONITORING SYSTEM</div>
+<div class="row" style="gap:10px">
+<div class="small">Realtime • GeoFence • Anomaly • Chat • Export • Replay</div>
+<button class="btn primary" id="btnOpenMgmt" title="Security Operations Management &amp; Command System">⚙ Security Management</button>
+</div>
+</div>
+<!-- ============== SECURITY OPERATIONS MANAGEMENT OVERLAY (additive) ============== -->
+<div id="mgmtOverlay" style="display:none">
+<div class="mgmt-header">
+<div class="mgmt-title">SECURITY OPERATIONS MANAGEMENT &amp; COMMAND SYSTEM</div>
+<div class="mgmt-header-actions">
+<button class="btn" id="btnExecView">Executive View: OFF</button>
+<button class="btn" id="btnMgmtReportTxt">📄 Report (TXT)</button>
+<button class="btn" id="btnMgmtReportPdf">🧾 Report (PDF)</button>
+<button class="btn danger" id="btnCloseMgmt">✕ Close</button>
+</div>
+</div>
+<div id="mgmtTabs">
+<div class="mgmt-tab active" data-mtab="exec">Executive Dashboard</div>
+<div class="mgmt-tab" data-mtab="compliance">Patrol Compliance</div>
+<div class="mgmt-tab" data-mtab="incidents">Incident Management</div>
+<div class="mgmt-tab" data-mtab="risk">Security Risk</div>
+<div class="mgmt-tab" data-mtab="officer">Officer Performance</div>
+<div class="mgmt-tab" data-mtab="area">Area Performance</div>
+<div class="mgmt-tab" data-mtab="alerts">Alert Center</div>
+</div>
+<div class="mgmt-body">
+<div class="mgmt-panel active" id="mpanel-exec"></div>
+<div class="mgmt-panel" id="mpanel-compliance"></div>
+<div class="mgmt-panel" id="mpanel-incidents"></div>
+<div class="mgmt-panel" id="mpanel-risk"></div>
+<div class="mgmt-panel" id="mpanel-officer"></div>
+<div class="mgmt-panel" id="mpanel-area"></div>
+<div class="mgmt-panel" id="mpanel-alerts"></div>
+</div>
+</div>
+<!-- ============== END MANAGEMENT OVERLAY ============== -->
+<!-- ============== FINDING DETAIL MODAL (additive) ============== -->
+<div id="findingDetailModal" style="display:none;position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,0.7);align-items:center;justify-content:center">
+<div style="background:#0b1622;border:1px solid rgba(0,230,255,0.3);border-radius:8px;max-width:800px;width:92%;max-height:85vh;overflow:auto;padding:16px">
+<div style="display:flex;justify-content:flex-end;margin-bottom:6px"><button class="btn danger" id="btnCloseFindingDetail">✕ Close</button></div>
+<div id="findingDetailBody"></div>
+<div id="findingTimelineBody"></div>
+</div>
+</div>
+<!-- ============== END FINDING DETAIL MODAL ============== -->
+<!-- ============== ADVANCE FINDING STATUS MODAL (additive) ============== -->
+<div id="advanceModal">
+<div class="adv-box">
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+<div class="mgmt-section-title" id="advanceModalTitle" style="margin:0">Update Status</div>
+<button class="btn danger" id="btnAdvanceCancel" style="font-size:11px;padding:4px 8px">✕ Close</button>
+</div>
+<div class="mgmt-form" style="grid-template-columns:1fr">
+<div><label>Actor / Petugas</label><input id="advActor" placeholder="Nama petugas"/></div>
+<div><label>Catatan</label><textarea id="advNote" placeholder="Catatan (opsional)"></textarea></div>
+<div>
+<label>Photo Evidence</label>
+<div class="photo-actions">
+<label class="btn" for="advPhotoCamera">📷 Camera</label>
+<input accept="image/*" capture="environment" id="advPhotoCamera" multiple="" style="display:none" type="file"/>
+<label class="btn" for="advPhotoGallery">🖼️ Gallery</label>
+<input accept="image/*" id="advPhotoGallery" multiple="" style="display:none" type="file"/>
+</div>
+<div class="photo-preview" id="advPhotoPreview"></div>
+</div>
+<div class="form-actions">
+<button class="btn primary" id="btnAdvanceSubmit">Simpan</button>
+</div>
+<div class="save-status" id="advanceStatus"></div>
+</div>
+</div>
+</div>
+<!-- ============== END ADVANCE FINDING STATUS MODAL ============== -->
+<div class="container">
+<div class="panel" id="leftPanel">
+<div class="tabs">
+<div class="tab active" data-tab="monitor">Monitor</div>
+<div class="tab" data-tab="manual">Manual Input</div>
+<div class="tab" data-tab="cleanup">Deep Clean</div>
+</div>
+<!-- Monitor Tab -->
+<div class="tab-content active" id="monitor-tab">
+<div class="controls">
+<button class="btn primary" id="centerAll">Center All</button>
+<button class="btn" id="toggleFollow">Follow: OFF</button>
+<button class="btn" id="toggleSound">Sound: OFF</button>
+<button class="btn" id="exportCsv">Export CSV</button>
+<button class="btn" id="exportXlsx">Export XLSX</button>
+<button class="btn danger" id="btnStopAlarm">Stop Alarm</button>
+</div>
+<div style="margin-bottom:8px">
+<input class="search" id="search" placeholder="Search name / area / shift..."/>
+</div>
+<div style="display:flex;gap:6px;margin-bottom:8px">
+<input id="from" style="flex:1;padding:8px;border-radius:4px;border:0;background:rgba(0,0,0,0.2);color:var(--muted)" type="datetime-local"/>
+<input id="to" style="flex:1;padding:8px;border-radius:4px;border:0;background:rgba(0,0,0,0.2);color:var(--muted)" type="datetime-local"/>
+</div>
+<div style="margin-bottom:8px">
+<label class="small">Area bbox (swLat,swLng,neLat,neLng)</label>
+<input id="bbox" placeholder="-6.35,106.70,-6.10,106.90" style="width:100%;padding:8px;border-radius:4px;border:0;background:rgba(0,0,0,0.2);color:var(--muted)"/>
+</div>
+<div style="font-weight:700;margin-bottom:6px">Petugas / Live</div>
+<div id="list"></div>
+<div style="margin-top:10px;font-weight:700">Playback</div>
+<div class="row" style="margin-bottom:8px">
+<button class="btn" id="startReplay">Start</button>
+<button class="btn" id="stopReplay">Stop</button>
+<select id="speed"><option value="1">1x</option><option value="2">2x</option><option value="4">4x</option></select>
+</div>
+<div class="chatBox">
+<div style="font-weight:700;margin-bottom:6px">Chat (Realtime)</div>
+<div class="chatList" id="chatList"></div>
+<div style="display:flex;gap:6px;margin-top:6px">
+<input id="chatInput" placeholder="Ketik pesan..." style="flex:1;padding:8px;border-radius:4px;border:0;background:rgba(0,0,0,0.18);color:var(--muted)"/>
+<button class="btn" id="chatSend">Send</button>
+</div>
+</div>
+<div class="footer">DB: <span id="dbPath">/patroli &amp; /live</span> • Photos via Cloudinary/public URLs</div>
+</div>
+<!-- Manual Input Tab -->
+<div class="tab-content" id="manual-tab">
+<div class="manual-input">
+<input id="manualName" placeholder="Nama Petugas" type="text"/>
+<div class="form-row">
+<select id="manualShift">
+<option value="">Pilih Shift</option>
+<option value="Pagi">Shift Pagi</option>
+<option value="Siang">Shift Siang</option>
+<option value="Malam">Shift Malam</option>
+</select>
+<select id="manualHari">
+<option value="">Pilih Hari</option>
+<option value="Senin">Senin</option>
+<option value="Selasa">Selasa</option>
+<option value="Rabu">Rabu</option>
+<option value="Kamis">Kamis</option>
+<option value="Jumat">Jumat</option>
+<option value="Sabtu">Sabtu</option>
+<option value="Minggu">Minggu</option>
+</select>
+</div>
+<div class="form-row">
+<input id="manualTanggal" max="31" min="1" placeholder="Tanggal (1-31)" type="number"/>
+<select id="manualBulan">
+<option value="">Pilih Bulan</option>
+<option value="01">Januari</option>
+<option value="02">Februari</option>
+<option value="03">Maret</option>
+<option value="04">April</option>
+<option value="05">Mei</option>
+<option value="06">Juni</option>
+<option value="07">Juli</option>
+<option value="08">Agustus</option>
+<option value="09">September</option>
+<option value="10">Oktober</option>
+<option value="11">November</option>
+<option value="12">Desember</option>
+</select>
+<input id="manualTahun" max="2030" min="2020" placeholder="Tahun" type="number" value="2025"/>
+</div>
+<div class="form-row">
+<input id="manualJam" max="23" min="0" placeholder="Jam (0-23)" type="number"/>
+<input id="manualMenit" max="59" min="0" placeholder="Menit (0-59)" type="number"/>
+</div>
+<button class="btn primary" id="addManual">Tambah Petugas Manual</button>
+</div>
+<div id="manualList"></div>
+</div>
+<!-- Deep Clean Tab -->
+<div class="tab-content" id="cleanup-tab">
+<div style="margin-bottom:15px;padding:10px;background:rgba(255,0,85,0.1);border-radius:4px;border:1px solid var(--cyber-red)">
+<h4 style="margin:0 0 8px 0;color:var(--cyber-red)">PERINGATAN KRITIS</h4>
+<p style="margin:0;font-size:12px">Tindakan ini akan menghapus SEMUA data termasuk patroli, live tracking, chat history, dan data manual. Tindakan ini TIDAK DAPAT DIBATALKAN!</p>
+</div>
+<div style="margin-bottom:10px">
+<label><input id="confirmDelete" type="checkbox"/> Saya memahami dan setuju untuk menghapus semua data</label>
+</div>
+<button class="btn danger" disabled="" id="deepClean">HAPUS SEMUA DATA SISTEM</button>
+<div id="cleanStatus" style="margin-top:10px;font-size:12px"></div>
+</div>
+</div>
+<div class="panel" id="mapPanel">
+<div id="map"></div>
+</div>
+</div>
+<!-- libs -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<!-- ================================================================ -->
+<!-- FIREBASE BOOTSTRAP — parser-blocking + multi-CDN fallback        -->
+<!-- MUST finish before the application script below starts.         -->
+<!-- ================================================================ -->
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-storage-compat.js"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<!-- ================================================================ -->
+<!-- ✅ ADDITIVE ENGINE: LIVE TRACK LINE + CHECKPOINT VISUALIZATION     -->
+<!-- Tidak menghapus/mengubah fitur lama (Replay, Search, Follow,     -->
+<!-- Sound, Export, Manual Officer, Deep Clean, Chat, Panic, Geofence)-->
+<!-- ================================================================ -->
+
+<!-- ============== END ADDITIVE ENGINE ============== -->
+<!-- ================================================================ -->
+<!-- ✅ ADDITIVE ENGINE: SECURITY OPERATIONS MANAGEMENT & COMMAND SYSTEM -->
+<!-- Read-only terhadap patrolCache/liveCache/listOrder/alertsCache/    -->
+<!-- panicActiveUids/checkpoints. Menulis HANYA ke /incidents, /risks,  -->
+<!-- /management/panicLog. Tidak mengubah DB atau fitur lama.          -->
+<!-- ================================================================ -->
+
+
+<!-- ============== END MANAGEMENT ENGINE ============== -->
+
+<script src="app.js"></script></body>
+</html>

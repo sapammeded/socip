@@ -1,0 +1,3396 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>CYBER PATROL — MONITORING SYSTEM</title>
+
+<!-- Leaflet -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+
+<style>
+:root{
+  --bg:#05060a; --panel:#07101a; --card:#0b1220; --muted:#9aa4b2; --accent:#00e6ff;
+  --cyber-green:#00ff88; --cyber-red:#ff0055; --cyber-blue:#0099ff; --cyber-purple:#aa00ff;
+}
+*{box-sizing:border-box}
+html,body{width:100%;max-width:100%;overflow-x:hidden}
+body{margin:0;font-family:'Courier New', monospace, system-ui;background:linear-gradient(180deg,#02040a,#07101a);color:#e6f7ff}
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px;background:linear-gradient(90deg,#041023,#081428);border-bottom:1px solid rgba(0,230,255,0.1);position:relative;overflow:hidden;min-width:0}
+.topbar>.brand{min-width:0;max-width:55%;overflow-wrap:anywhere}
+.topbar>.row{min-width:0;flex-wrap:wrap;justify-content:flex-end}
+.topbar::before{content:'';position:absolute;top:0;left:0;right:0;bottom:0;background:linear-gradient(90deg, transparent, rgba(0,255,136,0.05), transparent);animation:scanline 3s linear infinite}
+@keyframes scanline{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
+.brand{font-weight:700;color:var(--cyber-green);text-shadow:0 0 10px rgba(0,255,136,0.5)}
+.brand::before{content:'>> '}
+.brand::after{content:' <<'}
+.container{display:grid;grid-template-columns:380px 1fr;height:calc(100vh - 56px);gap:12px;padding:12px}
+.panel{background:linear-gradient(180deg,var(--panel),#041018);border-radius:4px;padding:10px;overflow:auto;border:1px solid rgba(0,230,255,0.1);box-shadow:0 0 15px rgba(0,0,0,0.5)}
+.controls{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+.btn{padding:8px 10px;border-radius:4px;border:1px solid rgba(0,230,255,0.3);background:rgba(0,0,0,0.5);color:var(--accent);cursor:pointer;font-family:'Courier New', monospace;transition:all 0.2s}
+.btn:hover{background:rgba(0,230,255,0.1);box-shadow:0 0 8px rgba(0,230,255,0.3)}
+.btn.primary{background:linear-gradient(90deg,var(--cyber-green),var(--cyber-blue));color:#001;border:none;font-weight:bold}
+.btn.danger{background:linear-gradient(90deg,var(--cyber-red),#ff3366);color:#fff;border:none}
+.row{display:flex;gap:8px;align-items:center}
+#map{height:100%;border-radius:4px;border:1px solid rgba(0,230,255,0.2)}
+.list-item{display:flex;gap:10px;align-items:center;padding:8px;border-radius:4px;margin-bottom:8px;background:linear-gradient(90deg,rgba(255,255,255,0.01),transparent);cursor:pointer;border-left:3px solid transparent;transition:all 0.2s}
+.list-item:hover{background:linear-gradient(90deg,rgba(0,230,255,0.05),transparent);border-left-color:var(--accent)}
+.list-item.online{border-left-color:var(--cyber-green)}
+.list-item.offline{border-left-color:var(--cyber-red)}
+.thumb{width:64px;height:48px;object-fit:cover;border-radius:4px;border:1px solid rgba(255,255,255,0.03);position:relative;background:linear-gradient(135deg, rgba(0,230,255,0.1), rgba(0,255,136,0.05))}
+.status-indicator{position:absolute;bottom:2px;right:2px;width:12px;height:12px;border-radius:50%;border:1px solid rgba(0,0,0,0.5)}
+.status-online{background-color:var(--cyber-green);box-shadow:0 0 5px var(--cyber-green)}
+.status-offline{background-color:var(--cyber-red);box-shadow:0 0 5px var(--cyber-red)}
+.meta{flex:1}
+.meta h4{margin:0;font-size:14px;color:var(--accent)}
+.meta p{margin:4px 0 0;font-size:12px;color:var(--muted)}
+.small{font-size:12px;color:var(--muted)}
+.chatBox{margin-top:10px;background:rgba(255,255,255,0.02);padding:8px;border-radius:4px;border:1px solid rgba(0,230,255,0.1)}
+.chatList{height:160px;overflow:auto;padding:6px;background:transparent;border-radius:4px}
+.chatRow{display:flex;gap:6px;margin-bottom:8px}
+.alertFloat{position:fixed;right:18px;bottom:18px;padding:12px 14px;background:var(--cyber-red);color:#041018;border-radius:4px;z-index:9999;font-weight:bold;border-left:4px solid #ff3366}
+.search{width:100%;padding:8px;border-radius:4px;border:1px solid rgba(0,230,255,0.2);background:rgba(0,0,0,0.25);color:var(--muted);font-family:'Courier New', monospace}
+.footer{font-size:12px;color:var(--muted);margin-top:8px}
+.tabs{display:flex;margin-bottom:10px;border-bottom:1px solid rgba(0,230,255,0.2)}
+.tab{flex:1;padding:8px;text-align:center;cursor:pointer;border-bottom:2px solid transparent}
+.tab.active{color:var(--cyber-green);border-bottom-color:var(--cyber-green)}
+.tab-content{display:none}
+.tab-content.active{display:block}
+.manual-input{margin-bottom:10px}
+.manual-input input,.manual-input select{width:100%;padding:8px;border-radius:4px;border:1px solid rgba(0,230,255,0.2);background:rgba(0,0,0,0.25);color:var(--muted);margin-bottom:8px;font-family:'Courier New', monospace}
+.manual-input .form-row{display:flex;gap:8px;margin-bottom:8px}
+.manual-input .form-row input,.manual-input .form-row select{flex:1;margin-bottom:0}
+.manual-input button{width:100%}
+
+/* ✅ DEVICE BADGE (top offset disesuaikan agar tidak menutupi SOCIP™ brand bar) */
+.device-badge {
+  position: fixed;
+  top: 84px;
+  right: 15px;
+  background: rgba(0, 0, 0, 0.85);
+  padding: 8px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  border: 1px solid rgba(0, 230, 255, 0.4);
+  backdrop-filter: blur(8px);
+  z-index: 1000;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.device-icon {
+  font-size: 14px;
+}
+
+.device-text {
+  font-weight: bold;
+  color: #00e6ff;
+}
+
+.device-detail {
+  font-size: 10px;
+  color: #9aa4b2;
+}
+
+.device-spoofed {
+  color: #ff0055;
+  font-weight: bold;
+  margin-left: 5px;
+}
+
+/* ✅ DEVICE INFO IN LIST */
+.device-info {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  color: #00ff88;
+  margin-top: 3px;
+}
+
+.device-info.spoofed {
+  color: #ff3366;
+}
+
+@media(max-width:900px){ 
+  .container{grid-template-columns:minmax(0,1fr);height:auto;min-width:0;padding:8px;gap:8px} 
+  .panel{min-width:0;max-width:100%;overflow-x:hidden}
+  #map{height:50vh;min-height:320px;max-width:100%} 
+  .device-badge {
+    top: 145px;
+    right: 10px;
+    max-width:calc(100vw - 20px);
+    padding: 6px 10px;
+    font-size: 11px;
+  }
+  .topbar{align-items:flex-start;flex-direction:column;padding:10px 12px}
+  .topbar>.brand{max-width:100%;font-size:clamp(16px,4.5vw,22px);line-height:1.35}
+  .topbar>.row{width:100%;max-width:100%;justify-content:flex-start;gap:8px;padding-left:52px;box-sizing:border-box}
+  .topbar>.row>.small{display:none}
+  .topbar>.row>#btnOpenMgmt{max-width:100%;white-space:normal}
+}
+
+
+/* ✅ Panic indicator di Command Center */
+.list-item.panic-active{
+  border-color: var(--cyber-red) !important;
+  box-shadow: 0 0 12px rgba(255,0,85,0.9) !important;
+}
+@keyframes panicBlink{
+  0%,100%{ background: rgba(255,0,85,0.10); }
+  50%{ background: rgba(255,0,85,0.35); }
+}
+
+/* ================================================================ */
+/* ✅ ADDITIVE: SECURITY OPERATIONS MANAGEMENT & COMMAND SYSTEM CSS   */
+/* Namespaced (mgmt-/kpi-/exec-/badge-/mpanel-) — tidak menimpa style */
+/* existing manapun.                                                 */
+/* ================================================================ */
+#mgmtOverlay{
+  position:fixed; inset:0; z-index:20000; display:none;
+  background:linear-gradient(180deg, rgba(2,4,10,0.98), rgba(5,8,16,0.99));
+  flex-direction:column;
+}
+.mgmt-header{
+  display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;
+  padding:12px 16px; border-bottom:1px solid rgba(0,230,255,0.15);
+  background:linear-gradient(90deg,#041023,#081428);
+}
+.mgmt-title{font-weight:700;color:var(--cyber-green);text-shadow:0 0 10px rgba(0,255,136,0.5);font-size:15px}
+.mgmt-title::before{content:'>> '}
+.mgmt-title::after{content:' <<'}
+.mgmt-header-actions{display:flex;gap:8px;flex-wrap:wrap}
+#mgmtTabs{display:flex;gap:2px;padding:0 16px;background:rgba(0,0,0,0.3);overflow-x:auto;border-bottom:1px solid rgba(0,230,255,0.1)}
+.mgmt-tab{padding:10px 14px;cursor:pointer;color:var(--muted);font-size:12px;white-space:nowrap;border-bottom:2px solid transparent;transition:all .2s}
+.mgmt-tab:hover{color:var(--accent)}
+.mgmt-tab.active{color:var(--cyber-green);border-bottom-color:var(--cyber-green)}
+.mgmt-body{flex:1;overflow:auto;padding:16px}
+.mgmt-panel{display:none}
+.mgmt-panel.active{display:block}
+.mgmt-section-title{font-weight:700;color:var(--accent);margin:18px 0 8px;font-size:13px;letter-spacing:.5px;border-left:3px solid var(--accent);padding-left:8px}
+.mgmt-section-title:first-child{margin-top:0}
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-bottom:8px}
+.kpi-card{background:linear-gradient(180deg,var(--panel),#041018);border:1px solid rgba(0,230,255,0.15);border-radius:6px;padding:10px 12px}
+.kpi-card.kpi-good{border-color:rgba(0,255,136,0.4)}
+.kpi-card.kpi-warn{border-color:rgba(255,210,63,0.5)}
+.kpi-card.kpi-bad{border-color:rgba(255,0,85,0.6);box-shadow:0 0 10px rgba(255,0,85,0.15)}
+.kpi-label{font-size:11px;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.3px}
+.kpi-value{font-size:20px;font-weight:700;color:#e6f7ff}
+.kpi-card.kpi-good .kpi-value{color:var(--cyber-green)}
+.kpi-card.kpi-warn .kpi-value{color:#ffd23f}
+.kpi-card.kpi-bad .kpi-value{color:var(--cyber-red)}
+.kpi-sub{font-size:10px;color:var(--muted);margin-top:2px}
+.exec-status-banner{display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:6px;margin-bottom:12px;border:1px solid}
+.exec-status-dot{width:16px;height:16px;border-radius:50%;flex-shrink:0}
+.exec-status-text{font-weight:700;font-size:15px}
+.exec-status-sub{font-size:11px;color:var(--muted);margin-top:2px}
+.status-GREEN{background:rgba(0,255,136,0.08);border-color:rgba(0,255,136,0.5)}
+.status-GREEN .exec-status-dot{background:var(--cyber-green);box-shadow:0 0 10px var(--cyber-green)}
+.status-GREEN .exec-status-text{color:var(--cyber-green)}
+.status-AMBER{background:rgba(255,210,63,0.08);border-color:rgba(255,210,63,0.5)}
+.status-AMBER .exec-status-dot{background:#ffd23f;box-shadow:0 0 10px #ffd23f}
+.status-AMBER .exec-status-text{color:#ffd23f}
+.status-RED{background:rgba(255,0,85,0.1);border-color:rgba(255,0,85,0.6)}
+.status-RED .exec-status-dot{background:var(--cyber-red);box-shadow:0 0 10px var(--cyber-red);animation:panicBlink 1s infinite}
+.status-RED .exec-status-text{color:var(--cyber-red)}
+.status-NA{background:rgba(154,164,178,0.08);border-color:rgba(154,164,178,0.4)}
+.status-NA .exec-status-dot{background:var(--muted)}
+.status-NA .exec-status-text{color:var(--muted)}
+.mini-list{list-style:none;margin:0;padding:0;font-size:12px}
+.mini-list li{padding:6px 8px;border-bottom:1px solid rgba(255,255,255,0.05)}
+.na{color:var(--muted);font-size:12px;padding:8px 0;font-style:italic}
+.mgmt-table{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:12px}
+.mgmt-table th{text-align:left;padding:8px 6px;color:var(--accent);border-bottom:1px solid rgba(0,230,255,0.2);font-size:11px;text-transform:uppercase}
+.mgmt-table td{padding:6px;border-bottom:1px solid rgba(255,255,255,0.04);color:#cfe6ff}
+.mgmt-table tr:hover td{background:rgba(0,230,255,0.03)}
+.rank-1{color:var(--cyber-green);font-weight:700}
+.rank-last{color:var(--cyber-red);font-weight:700}
+.badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700}
+.badge-critical{background:rgba(255,0,85,0.2);color:var(--cyber-red);border:1px solid var(--cyber-red)}
+.badge-high{background:rgba(255,152,0,0.2);color:#ff9800;border:1px solid #ff9800}
+.badge-medium{background:rgba(255,210,63,0.2);color:#ffd23f;border:1px solid #ffd23f}
+.badge-low{background:rgba(0,255,136,0.15);color:var(--cyber-green);border:1px solid var(--cyber-green)}
+.badge-na{background:rgba(154,164,178,0.15);color:var(--muted);border:1px solid rgba(154,164,178,0.4)}
+.badge-status{background:rgba(0,153,255,0.15);color:var(--cyber-blue);border:1px solid var(--cyber-blue)}
+.mgmt-form{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px;background:rgba(255,255,255,0.02);padding:12px;border-radius:6px;border:1px solid rgba(0,230,255,0.1);margin-bottom:8px}
+.mgmt-form label{display:block;font-size:10px;color:var(--muted);margin-bottom:3px;text-transform:uppercase}
+.mgmt-form input,.mgmt-form select,.mgmt-form textarea{width:100%;padding:7px;border-radius:4px;border:1px solid rgba(0,230,255,0.2);background:rgba(0,0,0,0.3);color:#e6f7ff;font-family:'Courier New',monospace;font-size:12px}
+.mgmt-form textarea{min-height:50px;resize:vertical}
+.form-actions{grid-column:1/-1;display:flex;justify-content:flex-end}
+.alert-priority-row{display:flex;gap:10px;align-items:flex-start;padding:10px;border-radius:6px;margin-bottom:6px;border-left:3px solid transparent}
+.alert-priority-row.p-critical{background:rgba(255,0,85,0.1);border-left-color:var(--cyber-red)}
+.alert-priority-row.p-high{background:rgba(255,152,0,0.08);border-left-color:#ff9800}
+.alert-priority-row.p-medium{background:rgba(255,210,63,0.08);border-left-color:#ffd23f}
+.alert-priority-row.p-low{background:rgba(0,255,136,0.06);border-left-color:var(--cyber-green)}
+.ap-title{font-weight:700;font-size:12px;color:#e6f7ff}
+.ap-meta{font-size:11px;color:var(--muted);margin-top:2px}
+@media(max-width:900px){
+  #mgmtTabs{padding:0 8px}
+  .mgmt-tab{padding:8px 10px;font-size:11px}
+  .mgmt-body{padding:10px}
+  .kpi-grid{grid-template-columns:repeat(auto-fill,minmax(130px,1fr))}
+  .mgmt-form{grid-template-columns:1fr}
+  .mgmt-header{padding:10px}
+  .mgmt-title{font-size:13px}
+}
+
+
+/* ================================================================
+   SOCIP™ v16 — GLOBAL OPERATIONS MENU
+   Hamburger menu / drawer: organized access without changing
+   existing feature logic or database paths.
+================================================================ */
+.socip-menu-trigger{
+  position:absolute;left:10px;top:50%;transform:translateY(-50%);z-index:30;
+  width:42px;height:42px;border:1px solid rgba(0,230,255,.35);
+  border-radius:8px;background:rgba(2,10,20,.92);color:var(--cyber-green);
+  font-family:'Courier New',monospace;font-size:20px;cursor:pointer;
+  box-shadow:0 0 12px rgba(0,230,255,.12);
+}
+.socip-menu-trigger:active{transform:translateY(-50%) scale(.97)}
+.socip-menu-dim{position:fixed;inset:0;z-index:29990;background:rgba(0,0,0,.58);display:none}
+.socip-menu-dim.open{display:block}
+#socipOpsMenu{
+  position:fixed;left:0;top:0;bottom:0;width:min(330px,86vw);z-index:30000;
+  transform:translateX(-105%);transition:transform .22s ease;
+  background:linear-gradient(180deg,#04111f 0%,#020812 100%);
+  border-right:1px solid rgba(0,230,255,.28);
+  box-shadow:12px 0 35px rgba(0,0,0,.55);display:flex;flex-direction:column;
+}
+#socipOpsMenu.open{transform:translateX(0)}
+.socip-menu-head{padding:18px 16px 14px;border-bottom:1px solid rgba(0,230,255,.15)}
+.socip-menu-head strong{display:block;color:var(--cyber-green);font-size:15px;letter-spacing:1px}
+.socip-menu-head span{display:block;color:var(--muted);font-size:10px;margin-top:4px;line-height:1.4}
+.socip-menu-close{position:absolute;right:10px;top:10px;background:none;border:0;color:#ff3b75;font-size:22px;cursor:pointer}
+.socip-menu-body{overflow:auto;padding:10px}
+.socip-menu-group{margin:8px 0 5px;padding:5px 8px;color:#00e6ff;font-size:10px;text-transform:uppercase;letter-spacing:1px}
+.socip-menu-item{
+  width:100%;display:flex;align-items:center;gap:10px;text-align:left;
+  padding:11px 12px;margin:3px 0;border:1px solid transparent;border-radius:7px;
+  background:rgba(255,255,255,.025);color:#d8efff;font-family:'Courier New',monospace;
+  font-size:12px;cursor:pointer;box-sizing:border-box;
+}
+.socip-menu-item:hover,.socip-menu-item:active{border-color:rgba(0,230,255,.28);background:rgba(0,230,255,.07);color:var(--cyber-green)}
+.socip-menu-item .mi{width:22px;text-align:center;font-size:15px}
+.socip-menu-status{margin-top:auto;padding:10px 12px;border-top:1px solid rgba(0,230,255,.12);font-size:10px;color:var(--muted)}
+@media(max-width:600px){
+  .socip-menu-trigger{left:8px;top:8px;width:38px;height:38px;font-size:18px}
+  .socip-menu-head{padding-top:16px}
+  .topbar{position:relative;padding-left:54px!important}
+}
+
+/* ================================================================ */
+/* ✅ SOCIP™ BRANDING — dedicated header section (additive, tidak     */
+/* mengubah struktur/fungsi existing). Statis di alur dokumen paling  */
+/* atas, bukan popup/overlay/floating, tidak menutupi map/tombol.     */
+/* ================================================================ */
+.socip-brand-bar{
+  width:100%;
+  text-align:center;
+  padding:10px 12px 9px;
+  background:linear-gradient(135deg,#02040a 0%,#07101a 100%);
+  border-bottom:1px solid rgba(0,255,136,0.15);
+  position:relative;
+}
+.socip-brand-bar::after{
+  content:'';
+  position:absolute;left:0;right:0;bottom:-1px;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(0,255,136,0.4),transparent);
+}
+.socip-name{
+  font-family:'Courier New', monospace;
+  font-size:18px;
+  font-weight:900;
+  letter-spacing:3px;
+  color:#00FF88;
+  text-shadow:0 0 8px rgba(0,255,136,0.45), 0 0 2px rgba(0,255,136,0.6);
+  line-height:1.3;
+}
+.socip-tagline{
+  font-family:'Courier New', monospace;
+  font-size:10px;
+  font-weight:600;
+  letter-spacing:1.4px;
+  color:#9AA4B2;
+  text-transform:uppercase;
+  margin-top:3px;
+  line-height:1.4;
+}
+.socip-creator{
+  font-family:'Courier New', monospace;
+  font-size:9px;
+  font-weight:600;
+  color:#00E6FF;
+  margin-top:3px;
+  letter-spacing:0.5px;
+}
+@media (max-width:600px){
+  .topbar{padding:9px 10px}
+  .topbar>.brand{font-size:17px;letter-spacing:.2px}
+  .topbar>.row{width:100%}
+  .topbar>.row>#btnOpenMgmt{width:100%;font-size:12px;padding:9px 10px}
+  .device-badge{top:145px;right:8px;max-width:calc(100vw - 16px)}
+  .socip-brand-bar{padding:9px 8px 8px}
+  .socip-name{font-size:15px;letter-spacing:2.2px;}
+  .socip-tagline{ font-size:8px; letter-spacing:0.9px; }
+  .socip-creator{ font-size:8px; }
+}
+
+/* ================================================================ */
+/* ✅ ADDITIVE: PHOTO EVIDENCE + SAVE STATUS + ADVANCE MODAL CSS      */
+/* ================================================================ */
+.photo-actions{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+.photo-actions label.btn{display:inline-block;text-align:center;user-select:none}
+.photo-preview{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:4px}
+.photo-thumb{position:relative;width:76px;height:76px}
+.photo-thumb img{width:100%;height:100%;object-fit:cover;border-radius:4px;border:1px solid rgba(0,230,255,0.3)}
+.photo-thumb .rm{position:absolute;top:-6px;right:-6px;background:var(--cyber-red);color:#fff;border-radius:50%;width:18px;height:18px;font-size:11px;line-height:17px;text-align:center;cursor:pointer;border:1px solid #041018}
+.save-status{font-size:12px;margin-top:6px;grid-column:1/-1;min-height:16px}
+.save-status.pending{color:#ffd23f}
+.save-status.success{color:var(--cyber-green)}
+.save-status.error{color:var(--cyber-red)}
+#advanceModal{position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,0.75);align-items:center;justify-content:center;display:none}
+#advanceModal .adv-box{background:#0b1622;border:1px solid rgba(0,230,255,0.3);border-radius:8px;max-width:520px;width:92%;max-height:88vh;overflow:auto;padding:16px}
+
+/* v15 usability: management registry + help + mobile table */
+.mgmt-help{font-size:11px;line-height:1.55;color:var(--muted,#8ea4b8);background:rgba(0,20,35,.55);border:1px solid rgba(0,210,255,.16);border-radius:10px;padding:10px 12px;margin:8px 0 12px}
+.mgmt-help b{color:#d8f7ff}
+.finding-filters{display:flex;gap:7px;flex-wrap:wrap;margin:8px 0 12px}
+.finding-filter{border:1px solid rgba(0,220,255,.35);background:#06121d;color:#9fc7d8;border-radius:8px;padding:8px 11px;font:inherit;font-size:11px;cursor:pointer}
+.finding-filter.active{background:linear-gradient(90deg,#00f39a,#08a8ff);color:#001018;border-color:transparent}
+.mgmt-table-wrap{width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:8px;max-width:100%}
+.mgmt-table-wrap .mgmt-table td:last-child{white-space:nowrap}
+.mgmt-table-wrap .mgmt-table td:last-child .btn{margin:2px 3px 2px 0}
+@media(max-width:700px){
+  .mgmt-table-wrap{box-shadow:inset -12px 0 16px -18px rgba(0,230,255,.7)}
+  .mgmt-table-wrap .mgmt-table{min-width:900px}
+  .mgmt-section-title{font-size:14px}
+  .finding-filter{font-size:10px;padding:7px 9px}
+}
+.mgmt-table-wrap .mgmt-table{min-width:820px}
+.danger-btn{border-color:#ff2b69!important;color:#ff6f98!important}
+.mgmt-note{font-size:10px;color:#91a8b8;margin-top:4px}
+</style>
+</head>
+<body>
+  <!-- ✅ SOCIP™ BRANDING (dedicated header section, bukan overlay/popup) -->
+  <div class="socip-brand-bar">
+    <div class="socip-name">SOCIP&trade;</div>
+    <div class="socip-tagline">Security Operations Command &amp; Intelligence Platform</div>
+    <div class="socip-creator">Created By : Mbah Pri</div>
+  </div>
+
+
+  <!-- SOCIP™ OPERATIONS MENU -->
+  <div id="socipMenuDim" class="socip-menu-dim"></div>
+  <aside id="socipOpsMenu" aria-hidden="true">
+    <button id="socipMenuClose" class="socip-menu-close" aria-label="Tutup menu">×</button>
+    <div class="socip-menu-head">
+      <strong>SOCIP™ OPERATIONS MENU</strong>
+      <span>Security Operations Command &amp; Intelligence Platform</span>
+    </div>
+    <div class="socip-menu-body">
+      <div class="socip-menu-group">PATROL OPERATIONS</div>
+      <button class="socip-menu-item" data-socip-action="tab-monitor"><span class="mi">📡</span><span>Live Monitoring</span></button>
+      <button class="socip-menu-item" data-socip-action="tab-manual"><span class="mi">✍️</span><span>Manual Patrol Input</span></button>
+      <button class="socip-menu-item" data-socip-action="map"><span class="mi">🗺️</span><span>Live Map</span></button>
+      <button class="socip-menu-item" data-socip-action="replay"><span class="mi">▶️</span><span>Patrol Replay</span></button>
+
+      <div class="socip-menu-group">SECURITY MANAGEMENT</div>
+      <button class="socip-menu-item" data-socip-action="management"><span class="mi">⚙️</span><span>Security Management</span></button>
+      <button class="socip-menu-item" data-socip-action="finding"><span class="mi">📋</span><span>Incident / Finding Management</span></button>
+      <button class="socip-menu-item" data-socip-action="risk"><span class="mi">⚠️</span><span>Security Risk</span></button>
+      <button class="socip-menu-item" data-socip-action="alerts"><span class="mi">🚨</span><span>Alert Center</span></button>
+
+      <div class="socip-menu-group">REPORT &amp; SYSTEM</div>
+      <button class="socip-menu-item" data-socip-action="report"><span class="mi">📄</span><span>Management Report</span></button>
+      <button class="socip-menu-item" data-socip-action="cleanup"><span class="mi">🧹</span><span>Deep Clean</span></button>
+    </div>
+    <div class="socip-menu-status">Menu dapat disembunyikan kapan saja dengan ☰ atau ×.</div>
+  </aside>
+
+  <!-- ✅ DEVICE BADGE -->
+  <div id="deviceBadge" class="device-badge">
+    <span class="device-icon" id="deviceIcon">💻</span>
+    <div>
+      <div class="device-text" id="deviceText">Loading device...</div>
+      <div class="device-detail" id="deviceDetail">Detecting your device</div>
+    </div>
+  </div>
+
+  <div class="topbar">
+  <button id="socipMenuTrigger" class="socip-menu-trigger" aria-label="Buka menu operasi" aria-expanded="false">☰</button>
+    <div class="brand">CYBER PATROL — MONITORING SYSTEM</div>
+    <div class="row" style="gap:10px">
+      <div class="small">Realtime • GeoFence • Anomaly • Chat • Export • Replay</div>
+      <button class="btn primary" id="btnOpenMgmt" title="Security Operations Management & Command System">⚙ Security Management</button>
+    </div>
+  </div>
+
+  <!-- ============== SECURITY OPERATIONS MANAGEMENT OVERLAY (additive) ============== -->
+  <div id="mgmtOverlay" style="display:none">
+    <div class="mgmt-header">
+      <div class="mgmt-title">SECURITY OPERATIONS MANAGEMENT &amp; COMMAND SYSTEM</div>
+      <div class="mgmt-header-actions">
+        <button class="btn" id="btnExecView">Executive View: OFF</button>
+        <button class="btn" id="btnMgmtReportTxt">📄 Report (TXT)</button>
+        <button class="btn" id="btnMgmtReportPdf">🧾 Report (PDF)</button>
+        <button class="btn danger" id="btnCloseMgmt">✕ Close</button>
+      </div>
+    </div>
+    <div id="mgmtTabs">
+      <div class="mgmt-tab active" data-mtab="exec">Executive Dashboard</div>
+      <div class="mgmt-tab" data-mtab="compliance">Patrol Compliance</div>
+      <div class="mgmt-tab" data-mtab="incidents">Incident Management</div>
+      <div class="mgmt-tab" data-mtab="risk">Security Risk</div>
+      <div class="mgmt-tab" data-mtab="officer">Officer Performance</div>
+      <div class="mgmt-tab" data-mtab="area">Area Performance</div>
+      <div class="mgmt-tab" data-mtab="alerts">Alert Center</div>
+    </div>
+    <div class="mgmt-body">
+      <div class="mgmt-panel active" id="mpanel-exec"></div>
+      <div class="mgmt-panel" id="mpanel-compliance"></div>
+      <div class="mgmt-panel" id="mpanel-incidents"></div>
+      <div class="mgmt-panel" id="mpanel-risk"></div>
+      <div class="mgmt-panel" id="mpanel-officer"></div>
+      <div class="mgmt-panel" id="mpanel-area"></div>
+      <div class="mgmt-panel" id="mpanel-alerts"></div>
+    </div>
+  </div>
+  <!-- ============== END MANAGEMENT OVERLAY ============== -->
+
+  <!-- ============== FINDING DETAIL MODAL (additive) ============== -->
+  <div id="findingDetailModal" style="display:none;position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,0.7);align-items:center;justify-content:center">
+    <div style="background:#0b1622;border:1px solid rgba(0,230,255,0.3);border-radius:8px;max-width:800px;width:92%;max-height:85vh;overflow:auto;padding:16px">
+      <div style="display:flex;justify-content:flex-end;margin-bottom:6px"><button class="btn danger" id="btnCloseFindingDetail">✕ Close</button></div>
+      <div id="findingDetailBody"></div>
+      <div id="findingTimelineBody"></div>
+    </div>
+  </div>
+  <!-- ============== END FINDING DETAIL MODAL ============== -->
+
+  <!-- ============== ADVANCE FINDING STATUS MODAL (additive) ============== -->
+  <div id="advanceModal">
+    <div class="adv-box">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div class="mgmt-section-title" id="advanceModalTitle" style="margin:0">Update Status</div>
+        <button class="btn danger" id="btnAdvanceCancel" style="font-size:11px;padding:4px 8px">✕ Close</button>
+      </div>
+      <div class="mgmt-form" style="grid-template-columns:1fr">
+        <div><label>Actor / Petugas</label><input id="advActor" placeholder="Nama petugas"/></div>
+        <div><label>Catatan</label><textarea id="advNote" placeholder="Catatan (opsional)"></textarea></div>
+        <div>
+          <label>Photo Evidence</label>
+          <div class="photo-actions">
+            <label class="btn" for="advPhotoCamera">📷 Camera</label>
+            <input type="file" id="advPhotoCamera" accept="image/*" capture="environment" style="display:none" multiple/>
+            <label class="btn" for="advPhotoGallery">🖼️ Gallery</label>
+            <input type="file" id="advPhotoGallery" accept="image/*" style="display:none" multiple/>
+          </div>
+          <div id="advPhotoPreview" class="photo-preview"></div>
+        </div>
+        <div class="form-actions">
+          <button class="btn primary" id="btnAdvanceSubmit">Simpan</button>
+        </div>
+        <div id="advanceStatus" class="save-status"></div>
+      </div>
+    </div>
+  </div>
+  <!-- ============== END ADVANCE FINDING STATUS MODAL ============== -->
+
+  <div class="container">
+    <div class="panel" id="leftPanel">
+      <div class="tabs">
+        <div class="tab active" data-tab="monitor">Monitor</div>
+        <div class="tab" data-tab="manual">Manual Input</div>
+        <div class="tab" data-tab="cleanup">Deep Clean</div>
+      </div>
+      
+      <!-- Monitor Tab -->
+      <div class="tab-content active" id="monitor-tab">
+        <div class="controls">
+          <button class="btn primary" id="centerAll">Center All</button>
+          <button class="btn" id="toggleFollow">Follow: OFF</button>
+          <button class="btn" id="toggleSound">Sound: OFF</button>
+          <button class="btn" id="exportCsv">Export CSV</button>
+          <button class="btn" id="exportXlsx">Export XLSX</button>
+          <button class="btn danger" id="btnStopAlarm">Stop Alarm</button>
+        </div>
+
+        <div style="margin-bottom:8px">
+          <input id="search" class="search" placeholder="Search name / area / shift..." />
+        </div>
+
+        <div style="display:flex;gap:6px;margin-bottom:8px">
+          <input id="from" type="datetime-local" style="flex:1;padding:8px;border-radius:4px;border:0;background:rgba(0,0,0,0.2);color:var(--muted)"/>
+          <input id="to" type="datetime-local" style="flex:1;padding:8px;border-radius:4px;border:0;background:rgba(0,0,0,0.2);color:var(--muted)"/>
+        </div>
+
+        <div style="margin-bottom:8px">
+          <label class="small">Area bbox (swLat,swLng,neLat,neLng)</label>
+          <input id="bbox" placeholder="-6.35,106.70,-6.10,106.90" style="width:100%;padding:8px;border-radius:4px;border:0;background:rgba(0,0,0,0.2);color:var(--muted)"/>
+        </div>
+
+        <div style="font-weight:700;margin-bottom:6px">Petugas / Live</div>
+        <div id="list"></div>
+
+        <div style="margin-top:10px;font-weight:700">Playback</div>
+        <div class="row" style="margin-bottom:8px">
+          <button class="btn" id="startReplay">Start</button>
+          <button class="btn" id="stopReplay">Stop</button>
+          <select id="speed"><option value="1">1x</option><option value="2">2x</option><option value="4">4x</option></select>
+        </div>
+
+        <div class="chatBox">
+          <div style="font-weight:700;margin-bottom:6px">Chat (Realtime)</div>
+          <div id="chatList" class="chatList"></div>
+          <div style="display:flex;gap:6px;margin-top:6px">
+            <input id="chatInput" placeholder="Ketik pesan..." style="flex:1;padding:8px;border-radius:4px;border:0;background:rgba(0,0,0,0.18);color:var(--muted)"/>
+            <button class="btn" id="chatSend">Send</button>
+          </div>
+        </div>
+
+        <div class="footer">DB: <span id="dbPath">/patroli & /live</span> • Photos via Cloudinary/public URLs</div>
+      </div>
+      
+      <!-- Manual Input Tab -->
+      <div class="tab-content" id="manual-tab">
+        <div class="manual-input">
+          <input type="text" id="manualName" placeholder="Nama Petugas" />
+          
+          <div class="form-row">
+            <select id="manualShift">
+              <option value="">Pilih Shift</option>
+              <option value="Pagi">Shift Pagi</option>
+              <option value="Siang">Shift Siang</option>
+              <option value="Malam">Shift Malam</option>
+            </select>
+            <select id="manualHari">
+              <option value="">Pilih Hari</option>
+              <option value="Senin">Senin</option>
+              <option value="Selasa">Selasa</option>
+              <option value="Rabu">Rabu</option>
+              <option value="Kamis">Kamis</option>
+              <option value="Jumat">Jumat</option>
+              <option value="Sabtu">Sabtu</option>
+              <option value="Minggu">Minggu</option>
+            </select>
+          </div>
+          
+          <div class="form-row">
+            <input type="number" id="manualTanggal" placeholder="Tanggal (1-31)" min="1" max="31" />
+            <select id="manualBulan">
+              <option value="">Pilih Bulan</option>
+              <option value="01">Januari</option>
+              <option value="02">Februari</option>
+              <option value="03">Maret</option>
+              <option value="04">April</option>
+              <option value="05">Mei</option>
+              <option value="06">Juni</option>
+              <option value="07">Juli</option>
+              <option value="08">Agustus</option>
+              <option value="09">September</option>
+              <option value="10">Oktober</option>
+              <option value="11">November</option>
+              <option value="12">Desember</option>
+            </select>
+            <input type="number" id="manualTahun" placeholder="Tahun" min="2020" max="2030" value="2025" />
+          </div>
+          
+          <div class="form-row">
+            <input type="number" id="manualJam" placeholder="Jam (0-23)" min="0" max="23" />
+            <input type="number" id="manualMenit" placeholder="Menit (0-59)" min="0" max="59" />
+          </div>
+          
+          <button class="btn primary" id="addManual">Tambah Petugas Manual</button>
+        </div>
+        <div id="manualList"></div>
+      </div>
+      
+      <!-- Deep Clean Tab -->
+      <div class="tab-content" id="cleanup-tab">
+        <div style="margin-bottom:15px;padding:10px;background:rgba(255,0,85,0.1);border-radius:4px;border:1px solid var(--cyber-red)">
+          <h4 style="margin:0 0 8px 0;color:var(--cyber-red)">PERINGATAN KRITIS</h4>
+          <p style="margin:0;font-size:12px">Tindakan ini akan menghapus SEMUA data termasuk patroli, live tracking, chat history, dan data manual. Tindakan ini TIDAK DAPAT DIBATALKAN!</p>
+        </div>
+        <div style="margin-bottom:10px">
+          <label><input type="checkbox" id="confirmDelete" /> Saya memahami dan setuju untuk menghapus semua data</label>
+        </div>
+        <button class="btn danger" id="deepClean" disabled>HAPUS SEMUA DATA SISTEM</button>
+        <div id="cleanStatus" style="margin-top:10px;font-size:12px"></div>
+      </div>
+    </div>
+
+    <div class="panel" id="mapPanel">
+      <div id="map"></div>
+    </div>
+  </div>
+
+<!-- libs -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+<!-- ================================================================ -->
+<!-- FIREBASE BOOTSTRAP — parser-blocking + multi-CDN fallback        -->
+<!-- MUST finish before the application script below starts.         -->
+<!-- ================================================================ -->
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script>
+if(!window.firebase){
+  document.write('<script src="https://cdn.jsdelivr.net/npm/firebase@9.22.2/firebase-app-compat.js"><\/script>');
+}
+</script>
+
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+<script>
+if(!window.firebase || !window.firebase.auth){
+  document.write('<script src="https://cdn.jsdelivr.net/npm/firebase@9.22.2/firebase-auth-compat.js"><\/script>');
+}
+</script>
+
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+<script>
+if(!window.firebase || !window.firebase.database){
+  document.write('<script src="https://cdn.jsdelivr.net/npm/firebase@9.22.2/firebase-database-compat.js"><\/script>');
+}
+</script>
+
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-storage-compat.js"></script>
+<script>
+if(!window.firebase || !window.firebase.storage){
+  document.write('<script src="https://cdn.jsdelivr.net/npm/firebase@9.22.2/firebase-storage-compat.js"><\/script>');
+}
+</script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<script>
+/* ================== CONFIG ================== */
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyCnooeRNZRzTPDvOWIAH3pXbkIryZgJuic",
+  authDomain: "silitpitik7373.firebaseapp.com",
+  databaseURL: "https://silitpitik7373-default-rtdb.firebaseio.com",
+  projectId: "silitpitik7373",
+  storageBucket: "silitpitik7373.appspot.com",
+  messagingSenderId: "314430704796",
+  appId: "1:314430704796:web:2147f3a3a74bfa7affb159"
+};
+const DB_PATROLI = '/patroli';
+const DB_LIVE = '/live';
+const DB_CHAT = '/chat/global';
+const DB_ALERTS = '/alerts';
+
+/* ================== FIREBASE READY GATE ================== */
+// Firebase must be completely available before ANY code below touches db.ref().
+// The SDK tags above are parser-blocking and have a jsDelivr fallback.
+var db = null;
+var firebaseReady = false;
+var firebaseReadyError = null;
+
+(function bootstrapFirebase(){
+  try{
+    if(!window.firebase) throw new Error('Firebase SDK tidak termuat dari CDN utama maupun fallback.');
+    if(!firebase.apps || !firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
+    if(typeof firebase.database !== 'function') throw new Error('Firebase Realtime Database SDK tidak tersedia.');
+    db = firebase.database();
+    window.db = db;
+    firebaseReady = true;
+    window.firebaseReady = true;
+    window.firebaseReadyPromise = Promise.resolve(db);
+    console.log('✅ Firebase Bootstrap: READY');
+    try{
+      if(firebase.auth && firebase.auth().signInAnonymously){
+        firebase.auth().signInAnonymously().catch(e=>console.warn('auth err', e));
+      }
+    }catch(authErr){ console.warn('auth bootstrap err', authErr); }
+  }catch(e){
+    firebaseReadyError = e;
+    window.firebaseReady = false;
+    console.error('❌ Firebase Bootstrap FAILED:', e);
+
+    // HARD FAIL-SAFE: never allow a missing CDN SDK to crash the application.
+    // The facade preserves the Firebase method surface used by the existing app,
+    // while localStorage/local-save flows remain usable until Firebase is available.
+    function offlineRef(path){
+      var api = {
+        _path: path || '/',
+        on: function(){ return function(){}; },
+        once: function(){ return Promise.resolve({ val:function(){ return null; }, exists:function(){ return false; }, key:null }); },
+        off: function(){ return api; },
+        push: function(value){
+          var key = 'offline_' + Date.now() + '_' + Math.random().toString(36).slice(2,8);
+          var child = offlineRef((path||'/') + '/' + key);
+          child.key = key;
+          child.set = function(){ return Promise.resolve(); };
+          child.update = function(){ return Promise.resolve(); };
+          return child;
+        },
+        child: function(k){ return offlineRef((path||'/') + '/' + k); },
+        update: function(){ return Promise.resolve(); },
+        set: function(){ return Promise.resolve(); },
+        remove: function(){ return Promise.resolve(); },
+        limitToLast: function(){ return api; },
+        orderByChild: function(){ return api; },
+        equalTo: function(){ return api; }
+      };
+      return api;
+    }
+    var offlineDb = { ref:function(path){ return offlineRef(path); } };
+    window.firebase = {
+      apps: [],
+      initializeApp: function(){ return {}; },
+      database: function(){ return offlineDb; },
+      auth: function(){
+        return {
+          currentUser:null,
+          signInAnonymously:function(){ return Promise.reject(new Error('Firebase offline')); },
+          onAuthStateChanged:function(cb){ try{ cb(null); }catch(_){} return function(){}; }
+        };
+      },
+      storage: function(){ return { ref:function(){ return { put:function(){ return Promise.reject(new Error('Firebase Storage offline')); } }; } }; }
+    };
+    db = offlineDb;
+    window.db = db;
+    window.firebaseReadyPromise = Promise.reject(e);
+    window.firebaseReadyPromise.catch(function(){});
+  }
+})();
+
+function requireFirebase(){
+  if(firebaseReady && db) return db;
+  throw (firebaseReadyError || new Error('Firebase belum siap.'));
+}
+
+/* ================== FIREBASE STATUS ================== */
+(function installFirebaseStatus(){
+  try{
+    var host = document.querySelector('.topbar .row');
+    if(!host || document.getElementById('firebaseStatusBadge')) return;
+    var badge = document.createElement('div');
+    badge.id = 'firebaseStatusBadge';
+    badge.style.cssText = 'font-size:10px;padding:5px 8px;border:1px solid rgba(0,230,255,.25);border-radius:10px;color:#00ff88;background:rgba(0,0,0,.35);white-space:nowrap';
+    badge.textContent = firebaseReady ? '● Firebase: READY' : '● Firebase: OFFLINE / LOCAL';
+    host.insertBefore(badge, host.firstChild);
+    window.setFirebaseStatus = function(connected){
+      if(!badge) return;
+      if(!firebaseReady){ badge.textContent='● Firebase: OFFLINE / LOCAL'; badge.style.color='#ffd23f'; return; }
+      badge.textContent = connected ? '● Firebase: ONLINE' : '● Firebase: CONNECTING';
+      badge.style.color = connected ? '#00ff88' : '#ffd23f';
+    };
+    if(firebaseReady) window.setFirebaseStatus(false);
+  }catch(e){ console.warn('Firebase status UI error', e); }
+})();
+
+/* ================== FIREBASE CONNECTION MONITOR ================== */
+(function installFirebaseConnectionMonitor(){
+  if(!firebaseReady || !db) return;
+  try{
+    db.ref('.info/connected').on('value', function(snap){
+      var connected = snap && snap.val() === true;
+      if(typeof window.setFirebaseStatus === 'function') window.setFirebaseStatus(connected);
+      document.documentElement.dataset.firebaseConnected = connected ? 'true' : 'false';
+      console.log(connected ? '🟢 Firebase Realtime Database: ONLINE' : '🟡 Firebase Realtime Database: CONNECTING/OFFLINE');
+    }, function(err){
+      if(typeof window.setFirebaseStatus === 'function') window.setFirebaseStatus(false);
+      console.warn('Firebase connection monitor error', err);
+    });
+  }catch(e){ console.warn('Firebase connection monitor unavailable', e); }
+})();
+
+/* ================== DEVICE DETECTION ================== */
+function detectDevice() {
+  try {
+    const ua = navigator.userAgent;
+    console.log('🔍 User Agent:', ua);
+    
+    let browser = 'Unknown';
+    let os = 'Unknown';
+    let deviceType = 'desktop';
+    let deviceIcon = '💻';
+    
+    // Detect OS
+    if (ua.includes('Android')) {
+      os = 'Android';
+      deviceType = 'mobile';
+      deviceIcon = '📱';
+    } else if (ua.includes('iPhone') || ua.includes('iPad')) {
+      os = 'iOS';
+      deviceType = ua.includes('iPad') ? 'tablet' : 'mobile';
+      deviceIcon = ua.includes('iPad') ? '📟' : '📱';
+    } else if (ua.includes('Windows')) {
+      os = 'Windows';
+    } else if (ua.includes('Mac')) {
+      os = 'macOS';
+    } else if (ua.includes('Linux')) {
+      os = 'Linux';
+    }
+    
+    // Detect browser
+    if (ua.includes('Chrome') && !ua.includes('Edg')) browser = 'Chrome';
+    else if (ua.includes('Firefox')) browser = 'Firefox';
+    else if (ua.includes('Safari') && !ua.includes('Chrome')) browser = 'Safari';
+    else if (ua.includes('Edg')) browser = 'Edge';
+    else if (ua.includes('SamsungBrowser')) browser = 'Samsung Internet';
+    else if (ua.includes('Opera') || ua.includes('OPR')) browser = 'Opera';
+    
+    // Update device badge
+    document.getElementById('deviceIcon').textContent = deviceIcon;
+    document.getElementById('deviceText').textContent = `${browser} on ${os}`;
+    document.getElementById('deviceDetail').textContent = `${deviceType.charAt(0).toUpperCase() + deviceType.slice(1)} • ${navigator.platform}`;
+    
+    return { browser, os, deviceType, deviceIcon };
+  } catch (e) {
+    console.error('Device detection failed:', e);
+    document.getElementById('deviceText').textContent = 'Device detection failed';
+    return { browser: 'Unknown', os: 'Unknown', deviceType: 'unknown', deviceIcon: '❓' };
+  }
+}
+
+// Initialize device detection
+setTimeout(detectDevice, 500);
+
+/* UI refs */
+const elList = document.getElementById('list');
+const inpSearch = document.getElementById('search');
+const inpFrom = document.getElementById('from');
+const inpTo = document.getElementById('to');
+const inpBbox = document.getElementById('bbox');
+const btnCenterAll = document.getElementById('centerAll');
+const btnFollow = document.getElementById('toggleFollow');
+const btnSound = document.getElementById('toggleSound');
+const btnExportCsv = document.getElementById('exportCsv');
+const btnExportXlsx = document.getElementById('exportXlsx');
+const btnStartReplay = document.getElementById('startReplay');
+const btnStopReplay = document.getElementById('stopReplay');
+const selSpeed = document.getElementById('speed');
+const chatList = document.getElementById('chatList');
+const chatInp = document.getElementById('chatInput');
+const chatSend = document.getElementById('chatSend');
+
+// New UI elements
+const tabs = document.querySelectorAll('.tab');
+const tabContents = document.querySelectorAll('.tab-content');
+const manualName = document.getElementById('manualName');
+const manualShift = document.getElementById('manualShift');
+const manualHari = document.getElementById('manualHari');
+const manualTanggal = document.getElementById('manualTanggal');
+const manualBulan = document.getElementById('manualBulan');
+const manualTahun = document.getElementById('manualTahun');
+const manualJam = document.getElementById('manualJam');
+const manualMenit = document.getElementById('manualMenit');
+const addManual = document.getElementById('addManual');
+const manualList = document.getElementById('manualList');
+const deepClean = document.getElementById('deepClean');
+const confirmDelete = document.getElementById('confirmDelete');
+const cleanStatus = document.getElementById('cleanStatus');
+
+let FOLLOW = false, SOUND = false;
+
+/* MAP */
+const map = L.map('map', { zoomControl:false }).setView([-6.2,106.81666], 12);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(map);
+let markers = {}; // uid -> marker
+let patrolCache = {}; // uid -> [records]
+let liveCache = {}; // uid -> live
+let listOrder = [];
+let selectedUid = null;
+let trackLines = {};
+let replayInterval = null;
+
+// Panic & alerts cache
+let alertsCache = {};
+let panicActiveUids = {};
+let currentPanicUid = null;
+let panicBlinkTimer = null;
+
+// Audio objects untuk panic
+let panicCtx = null;
+let panicOsc = null;
+let panicGain = null;
+let panicInterval = null;
+let panicPlayer = null;
+
+// Manual data storage
+let manualData = JSON.parse(localStorage.getItem('manualPatrolData') || '{}');
+
+/* Tab switching */
+tabs.forEach(tab => {
+  tab.addEventListener('click', () => {
+    const tabId = tab.getAttribute('data-tab');
+    
+    tabs.forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    
+    tabContents.forEach(content => {
+      content.classList.remove('active');
+      if (content.id === `${tabId}-tab`) {
+        content.classList.add('active');
+      }
+    });
+    
+    if (tabId === 'manual') {
+      renderManualList();
+    }
+  });
+});
+
+/* Confirm delete checkbox */
+confirmDelete.addEventListener('change', function() {
+  deepClean.disabled = !this.checked;
+});
+
+/* Helper function to create timestamp from date components */
+function createTimestamp(tahun, bulan, tanggal, jam, menit) {
+  const date = new Date(
+    parseInt(tahun),
+    parseInt(bulan) - 1,
+    parseInt(tanggal),
+    parseInt(jam),
+    parseInt(menit)
+  );
+  return date.getTime();
+}
+
+/* Helper function to format date for display */
+function formatDateTime(timestamp) {
+  const date = new Date(timestamp);
+  const days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+  const months = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+  
+  const dayName = days[date.getDay()];
+  const dateNum = date.getDate();
+  const monthName = months[date.getMonth()];
+  const year = date.getFullYear();
+  const hours = date.getHours().toString().padStart(2, '0');
+  const minutes = date.getMinutes().toString().padStart(2, '0');
+  
+  return `${dayName}, ${dateNum} ${monthName} ${year} ${hours}:${minutes}`;
+}
+
+/* beep simple */
+function beep(){ if(!SOUND) return; try{ const ctx = new (window.AudioContext||window.webkitAudioContext)(); const o = ctx.createOscillator(); const g = ctx.createGain(); o.type='sine'; o.frequency.value=880; g.gain.value=0.03; o.connect(g); g.connect(ctx.destination); o.start(); setTimeout(()=>{ o.stop(); ctx.close(); },120); }catch(e){} }
+
+/* helpers */
+function fmtTs(ts){
+  if(!ts) return '—';
+  const n = Number(ts);
+  const ms = n < 1e12 ? n * 1000 : n;
+  const d = new Date(ms);
+  if(isNaN(d)) return '—';
+  return d.toLocaleString();
+}
+
+function addOrUpdateMarker(uid, lat, lon, title, photo, ts, device){
+  if(!lat || !lon) return;
+  if(!markers[uid]){
+    const m = L.marker([lat,lon]).addTo(map);
+    // ✅ ADD DEVICE INFO TO POPUP
+    const deviceInfo = device ? `<div style="font-size:11px;color:#00ff88">📱 ${device.browser || ''} on ${device.os || ''}</div>` : '';
+    m.bindPopup(`<b>${title||uid}</b><div style="font-size:12px">${fmtTs(ts)}</div>${deviceInfo}${photo ? `<img src="${photo}" style="width:220px;height:140px;object-fit:cover" onerror="this.style.display='none'"/>` : ''}`);
+    m.on('click', ()=> { selectUid(uid); });
+    markers[uid]=m;
+  } else {
+    const deviceInfo = device ? `<div style="font-size:11px;color:#00ff88">📱 ${device.browser || ''} on ${device.os || ''}</div>` : '';
+    markers[uid].setLatLng([lat,lon]);
+    markers[uid].setPopupContent(`<b>${title||uid}</b><div style="font-size:12px">${fmtTs(ts)}</div>${deviceInfo}${photo ? `<img src="${photo}" style="width:220px;height:140px;object-fit:cover" onerror="this.style.display='none'"/>` : ''}`);
+  }
+  if(FOLLOW && selectedUid === uid){
+    map.setView([lat,lon], 16);
+  }
+}
+
+/* select uid */
+function selectUid(uid){
+  selectedUid = uid;
+  startHighlight(uid);
+  const live = liveCache[uid] || {};
+  const lg = live.lastGps || {};
+  const device = live.device || (patrolCache[uid] && patrolCache[uid][0] && patrolCache[uid][0].device) || {};
+  if(lg && lg.lat && lg.lon){
+    map.setView([lg.lat, lg.lon], 16);
+    if(markers[uid]) markers[uid].openPopup();
+  } else if(patrolCache[uid] && patrolCache[uid][0]){
+    const it = patrolCache[uid][0];
+    addOrUpdateMarker(uid, it.lat||it.latitude, it.lng||it.lon, it.name||uid, it.photo||it.photoUrl, it.time||it.timestamp, device);
+    map.setView([it.lat||it.latitude, it.lng||it.lon], 15);
+  }
+}
+
+/* highlight */
+function startHighlight(uid){
+  document.querySelectorAll('.list-item').forEach(n=> n.style.boxShadow='none');
+  const e = document.getElementById('li-'+uid); if(e) e.style.boxShadow='0 12px 30px rgba(0,230,255,0.06)';
+}
+
+/* ✅ ENHANCED: collect rows with device info for export */
+function collectRows(){
+  const rows = [];
+  listOrder.forEach(uid=>{
+    const last = (patrolCache[uid] && patrolCache[uid][0]) || {};
+    const live = liveCache[uid] || {};
+    const pres = live.presence || {};
+    const lg = live.lastGps || {};
+    const device = last.device || live.device || {};
+    
+    rows.push({
+      uid,
+      name: pres.officerName||last.name||'',
+      area: last.area||last.description||'',
+      lat: lg.lat || last.lat || last.latitude || '',
+      lon: lg.lon || last.lng || last.lon || last.longitude || '',
+      time: last.time||last.timestamp||lg.time||pres.lastSeen||'',
+      // ✅ DEVICE INFO
+      device: device.name || `${device.browser || ''} on ${device.os || ''}`,
+      browser: device.browser || '',
+      os: device.os || '',
+      deviceType: device.type || '',
+      isSpoofed: device.isSpoofed ? 'YES' : 'NO'
+    });
+  });
+  return rows;
+}
+
+/* export CSV/XLSX */
+btnExportCsv.addEventListener('click', ()=>{
+  const rows = collectRows();
+  if(rows.length===0){ alert('No data'); return; }
+  const keys = Object.keys(rows[0]);
+  let csv = keys.join(',') + '\n';
+  rows.forEach(r=> csv += keys.map(k=>`"${String(r[k]||'').replace(/"/g,'""')}"`).join(',') + '\n');
+  const blob = new Blob([csv], {type:'text/csv'}); const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href=url; a.download='patrol_export.csv'; a.click();
+  setTimeout(()=> URL.revokeObjectURL(url),1500);
+});
+
+btnExportXlsx.addEventListener('click', ()=>{
+  const rows = collectRows();
+  if(rows.length===0){ alert('No data'); return; }
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'patrol');
+  XLSX.writeFile(wb, 'patrol_export_'+Date.now()+'.xlsx');
+});
+
+/* center all */
+btnCenterAll.addEventListener('click', ()=>{
+  const keys = Object.keys(markers);
+  if(!keys.length) return alert('No markers');
+  const pts = keys.map(k=> markers[k].getLatLng());
+  map.fitBounds(L.latLngBounds(pts).pad(0.2));
+});
+
+/* follow toggle */
+btnFollow.addEventListener('click', ()=>{
+  FOLLOW = !FOLLOW; btnFollow.textContent = 'Follow: ' + (FOLLOW ? 'ON' : 'OFF');
+});
+
+/* sound toggle */
+btnSound.addEventListener('click', ()=>{ SOUND = !SOUND; btnSound.textContent = 'Sound: ' + (SOUND ? 'ON' : 'OFF'); });
+
+/* replay */
+btnStartReplay.addEventListener('click', ()=>{
+  if(!selectedUid) return alert('Pilih petugas di list dulu');
+  const recs = (patrolCache[selectedUid]||[]).slice().reverse();
+  if(!recs.length) return alert('Tidak ada riwayat');
+  const speed = Number(selSpeed.value)||1;
+  let idx=0;
+  if(trackLines[selectedUid]) map.removeLayer(trackLines[selectedUid]);
+  const latlngs=[];
+  replayInterval = setInterval(()=>{
+    const it = recs[idx];
+    const lat = it.lat || it.latitude; const lon = it.lng || it.lon || it.longitude;
+    if(lat && lon){
+      latlngs.push([lat,lon]);
+      if(trackLines[selectedUid]) trackLines[selectedUid].setLatLngs(latlngs);
+      else trackLines[selectedUid] = L.polyline(latlngs, {color:'#00e6ff', weight:4, opacity:0.85}).addTo(map);
+      map.setView([lat,lon], 15);
+    }
+    idx++;
+    if(idx>=recs.length){ clearInterval(replayInterval); replayInterval=null; }
+  }, 1000 / speed);
+});
+
+btnStopReplay.addEventListener('click', ()=>{ if(replayInterval) clearInterval(replayInterval); replayInterval=null; });
+
+/* search filter */
+inpSearch.addEventListener('input', ()=> {
+  const q = inpSearch.value.trim().toLowerCase();
+  document.querySelectorAll('.list-item').forEach(el=>{
+    const txt = el.innerText.toLowerCase();
+    el.style.display = txt.indexOf(q) !== -1 ? 'flex' : 'none';
+  });
+});
+
+/* bbox filter parse */
+function inBbox(lat,lon,bboxStr){
+  if(!bboxStr) return true;
+  try{
+    const parts = bboxStr.split(',').map(s=>Number(s.trim()));
+    if(parts.length!==4 || parts.some(isNaN)) return true;
+    const [swLat,swLng,neLat,neLng] = parts;
+    return lat >= swLat && lat <= neLat && lon >= swLng && lon <= neLng;
+  }catch(e){ return true; }
+}
+
+/* ===================== MANUAL INPUT FUNCTIONS ===================== */
+function addManualOfficer() {
+  const name = manualName.value.trim();
+  const shift = manualShift.value;
+  const hari = manualHari.value;
+  const tanggal = manualTanggal.value;
+  const bulan = manualBulan.value;
+  const tahun = manualTahun.value;
+  const jam = manualJam.value;
+  const menit = manualMenit.value;
+  
+  if (!name || !shift || !hari || !tanggal || !bulan || !tahun || !jam || !menit) {
+    alert('Harap isi semua field dengan benar');
+    return;
+  }
+  
+  if (jam < 0 || jam > 23 || menit < 0 || menit > 59) {
+    alert('Jam harus antara 0-23 dan Menit antara 0-59');
+    return;
+  }
+  
+  if (tanggal < 1 || tanggal > 31) {
+    alert('Tanggal harus antara 1-31');
+    return;
+  }
+  
+  const timestamp = createTimestamp(tahun, bulan, tanggal, jam, menit);
+  const id = 'manual_' + Date.now();
+  
+  // ✅ ADD DEVICE INFO FOR MANUAL ENTRIES TOO
+  const deviceInfo = detectDevice();
+  
+  manualData[id] = {
+    name,
+    shift,
+    hari,
+    tanggal: parseInt(tanggal),
+    bulan,
+    tahun: parseInt(tahun),
+    jam: parseInt(jam),
+    menit: parseInt(menit),
+    time: timestamp,
+    timestamp: timestamp / 1000,
+    formattedTime: formatDateTime(timestamp),
+    // ✅ STORE DEVICE INFO
+    device: {
+      browser: deviceInfo.browser,
+      os: deviceInfo.os,
+      type: deviceInfo.deviceType,
+      isSpoofed: false,
+      name: `${deviceInfo.browser} on ${deviceInfo.os}`
+    }
+  };
+  
+  localStorage.setItem('manualPatrolData', JSON.stringify(manualData));
+  
+  manualName.value = '';
+  manualShift.value = '';
+  manualHari.value = '';
+  manualTanggal.value = '';
+  manualBulan.value = '';
+  manualTahun.value = '2025';
+  manualJam.value = '';
+  manualMenit.value = '';
+  
+  renderManualList();
+  
+  if (!listOrder.includes(id)) listOrder.push(id);
+  refreshUI();
+  
+  showAlert(`Petugas manual ${name} berhasil ditambahkan`);
+}
+
+function renderManualList() {
+  manualList.innerHTML = '';
+  
+  Object.keys(manualData).forEach(id => {
+    const item = manualData[id];
+    const device = item.device || {};
+    const deviceIcon = device.type === 'mobile' ? '📱' : 
+                      device.type === 'tablet' ? '📟' : '💻';
+    
+    const div = document.createElement('div');
+    div.className = 'list-item online';
+    div.innerHTML = `
+      <div class="thumb">
+        <div class="status-indicator status-online"></div>
+      </div>
+      <div class="meta">
+        <h4>${item.name}</h4>
+        <p>${item.shift} • ${item.hari}</p>
+        <p style="font-size:10px;color:var(--muted)">${item.formattedTime}</p>
+        <div class="device-info">
+          ${deviceIcon} ${device.browser || 'Unknown'} on ${device.os || 'Unknown'}
+        </div>
+      </div>
+      <button class="btn" style="padding:4px 8px;font-size:10px" onclick="removeManualOfficer('${id}')">Hapus</button>
+    `;
+    div.onclick = () => { selectUid(id); };
+    manualList.appendChild(div);
+  });
+}
+
+function removeManualOfficer(id) {
+  if (confirm('Hapus petugas manual ini?')) {
+    delete manualData[id];
+    localStorage.setItem('manualPatrolData', JSON.stringify(manualData));
+    
+    if (markers[id]) {
+      map.removeLayer(markers[id]);
+      delete markers[id];
+    }
+    
+    const index = listOrder.indexOf(id);
+    if (index > -1) listOrder.splice(index, 1);
+    
+    renderManualList();
+    refreshUI();
+  }
+}
+
+// Add manual officers to the main list
+function integrateManualData() {
+  Object.keys(manualData).forEach(id => {
+    if (!listOrder.includes(id)) listOrder.push(id);
+    
+    const item = manualData[id];
+    if (!patrolCache[id]) {
+      patrolCache[id] = [item];
+    }
+  });
+}
+
+/* ===================== DEEP CLEAN FUNCTIONS ===================== */
+async function performDeepClean() {
+  if (!confirmDelete.checked) {
+    alert('Silakan centang konfirmasi penghapusan terlebih dahulu');
+    return;
+  }
+  
+  if (!confirm('PERINGATAN AKHIR: Tindakan ini akan menghapus SEMUA data termasuk patroli, live tracking, chat history, alerts, dan data manual. Tindakan ini TIDAK DAPAT DIBATALKAN! Lanjutkan?')) {
+    return;
+  }
+  
+  cleanStatus.innerHTML = 'Memulai proses pembersihan sistem...';
+  
+  try {
+    cleanStatus.innerHTML = 'Menghapus data Firebase...';
+    
+    const deletions = [
+      db.ref(DB_PATROLI).remove(),
+      db.ref(DB_LIVE).remove(),
+      db.ref(DB_CHAT).remove(),
+      db.ref(DB_ALERTS).remove()
+    ];
+    
+    await Promise.all(deletions);
+    
+    cleanStatus.innerHTML = 'Membersihkan cache lokal...';
+    
+    patrolCache = {};
+    liveCache = {};
+    listOrder = [];
+    manualData = {};
+    
+    Object.keys(markers).forEach(id => {
+      map.removeLayer(markers[id]);
+    });
+    markers = {};
+    
+    Object.keys(trackLines).forEach(id => {
+      map.removeLayer(trackLines[id]);
+    });
+    trackLines = {};
+    
+    localStorage.clear();
+    
+    elList.innerHTML = '';
+    manualList.innerHTML = '';
+    chatList.innerHTML = '';
+    
+    inpSearch.value = '';
+    inpBbox.value = '';
+    chatInp.value = '';
+    
+    if (replayInterval) {
+      clearInterval(replayInterval);
+      replayInterval = null;
+    }
+    
+    confirmDelete.checked = false;
+    deepClean.disabled = true;
+    
+    cleanStatus.innerHTML = '<span style="color:var(--cyber-green)">✓ PEMBERSIHAN SELESAI: Semua data telah dihapus dari sistem</span>';
+    
+    showAlert('SISTEM BERSIH: Semua data telah dihapus');
+    
+    setTimeout(() => {
+      cleanStatus.innerHTML = '';
+    }, 8000);
+    
+  } catch (error) {
+    console.error('Cleanup error:', error);
+    cleanStatus.innerHTML = `<span style="color:var(--cyber-red)">✗ ERROR: ${error.message}</span>`;
+  }
+}
+
+/* ===================== DB listeners ===================== */
+const patroliRef = db.ref(DB_PATROLI);
+const liveRef = db.ref(DB_LIVE);
+const alertsRef = db.ref(DB_ALERTS);
+
+/* normalize patrol snapshot */
+function processPatroliSnapshot(obj){
+  Object.keys(obj||{}).forEach(uid=>{
+    const recMap = obj[uid] || {};
+    const arr = Object.keys(recMap).map(k => Object.assign({ _key: k }, recMap[k]));
+    arr.sort((a,b)=> (b.time||b.timestamp||0) - (a.time||a.timestamp||0));
+    patrolCache[uid] = arr;
+    if(!listOrder.includes(uid)) listOrder.push(uid);
+  });
+  
+  integrateManualData();
+  
+  listOrder = listOrder.sort((a,b)=>{
+    const ta = (liveCache[a] && (liveCache[a].presence && liveCache[a].presence.lastSeen)) || (patrolCache[a] && patrolCache[a][0] && (patrolCache[a][0].time||patrolCache[a][0].timestamp)) || 0;
+    const tb = (liveCache[b] && (liveCache[b].presence && liveCache[b].presence.lastSeen)) || (patrolCache[b] && patrolCache[b][0] && (patrolCache[b][0].time||patrolCache[b][0].timestamp)) || 0;
+    return tb - ta;
+  });
+  renderList();
+}
+
+/* process live */
+function processLiveSnapshot(obj){
+  Object.keys(obj||{}).forEach(uid=>{
+    liveCache[uid] = obj[uid] || {};
+    const lg = liveCache[uid].lastGps || liveCache[uid].lastgps || liveCache[uid].last_location || {};
+    const lat = lg.lat || lg.latitude || lg.latd;
+    const lon = lg.lon || lg.longitude || lg.long;
+    const name = (liveCache[uid].presence && liveCache[uid].presence.officerName) || liveCache[uid].officer || uid;
+    const photo = liveCache[uid].photoUrl || liveCache[uid].photo || null;
+    const device = liveCache[uid].device || {};
+    if(lat && lon) addOrUpdateMarker(uid, lat, lon, name, photo, lg.time || (liveCache[uid].presence && liveCache[uid].presence.lastSeen), device);
+    if(!listOrder.includes(uid)) listOrder.push(uid);
+  });
+  
+  integrateManualData();
+  
+  listOrder = listOrder.sort((a,b)=>{
+    const ta = (liveCache[a] && (liveCache[a].presence && liveCache[a].presence.lastSeen)) || (patrolCache[a] && patrolCache[a][0] && (patrolCache[a][0].time||patrolCache[a][0].timestamp)) || 0;
+    const tb = (liveCache[b] && (liveCache[b].presence && liveCache[b].presence.lastSeen)) || (patrolCache[b] && patrolCache[b][0] && (patrolCache[b][0].time||patrolCache[b][0].timestamp)) || 0;
+    return tb - ta;
+  });
+  renderList();
+}
+
+/* attach */
+patroliRef.on('value', snap=>{
+  processPatroliSnapshot(snap.val() || {});
+}, e=>console.warn('patroli err', e));
+liveRef.on('value', snap=>{
+  processLiveSnapshot(snap.val() || {});
+}, e=>console.warn('live err', e));
+
+/* child added/changed beeps */
+patroliRef.on('child_added', ()=>{ beep(); });
+patroliRef.on('child_changed', ()=>{ beep(); });
+liveRef.on('child_changed', ()=>{ beep(); });
+
+/* ===================== ANOMALY & GEOFENCE ===================== */
+function haversine(lat1,lon1,lat2,lon2){
+  if(!lat1||!lon1||!lat2||!lon2) return 0;
+  const R=6371000; const toRad=v=>v*Math.PI/180;
+  const dLat=toRad(lat2-lat1); const dLon=toRad(lon2-lon1);
+  const a=Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2)) * Math.sin(dLon/2)**2;
+  return 2*R*Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+const anomalyState = {}; const geoState = {}; const geofences = {};
+
+/* load geofences once */
+db.ref('/geofences').once('value').then(s=>{
+  const obj = s.val()||{};
+  Object.keys(obj).forEach(k=>{
+    const g = obj[k];
+    geofences[k] = g;
+    if(g.type === 'polygon' && Array.isArray(g.coords)){ L.polygon(g.coords, {color:'#ff5c5c', weight:2, fillOpacity:0.06}).addTo(map); }
+    else if(g.type === 'bbox' && g.coords && g.coords.length===4){
+      const [swLat,swLng,neLat,neLng] = g.coords; L.rectangle([[swLat,swLng],[neLat,neLng]], {color:'#ffb86b', weight:2, fillOpacity:0.03}).addTo(map);
+    }
+  });
+});
+
+/* simple point-in-polygon */
+function pointInPoly(point, vs){
+  if(!vs||!vs.length) return false;
+  const x=point[0], y=point[1];
+  let inside=false;
+  for(let i=0,j=vs.length-1;i<vs.length;j=i++){
+    const xi=vs[i][0], yi=vs[i][1], xj=vs[j][0], yj=vs[j][1];
+    const intersect = ((yi>y)!=(yj>y)) && (x < (xj-xi)*(y-yi)/(yj-yi+1e-12)+xi);
+    if(intersect) inside=!inside;
+  }
+  return inside;
+}
+
+function pushAlert(uid,type,details){
+  const ref = db.ref('/alerts').push();
+  ref.set({ uid, type, details, time: Date.now() });
+  showAlert(`${type} • ${uid} • ${JSON.stringify(details).slice(0,80)}`);
+}
+
+/* detect for a uid sample */
+function detectFor(uid, lat, lon, t){
+  if(!lat||!lon) return;
+  const s = anomalyState[uid] || {};
+  const now = t || Date.now();
+  if(s.lastLat !== undefined && s.lastLon !== undefined && s.lastTime){
+    const dist = haversine(s.lastLat, s.lastLon, lat, lon);
+    const dt = Math.max(1, (now - s.lastTime)/1000); // sec
+    const speed = (dist/dt)*3.6; // km/h
+    if(speed > 120){
+      pushAlert(uid,'HIGH_SPEED',{speed:Math.round(speed), dist:Math.round(dist)});
+      beep();
+    }
+    if(dist > 2000){
+      pushAlert(uid,'LARGE_JUMP',{dist:Math.round(dist)});
+      beep();
+    }
+    if(dist < 5 && (now - (s.lastMoveTime||s.lastTime)) > (10*60*1000)){
+      pushAlert(uid,'LONG_STOP',{idleMs: now - (s.lastMoveTime||s.lastTime)});
+      beep();
+    }
+    if(dist > 5) s.lastMoveTime = now;
+  } else s.lastMoveTime = now;
+  s.lastLat = lat; s.lastLon = lon; s.lastTime = now;
+  anomalyState[uid]=s;
+
+  // geofence check
+  Object.keys(geofences).forEach(gid=>{
+    const g = geofences[gid];
+    let inside=false;
+    if(g.type==='polygon' && Array.isArray(g.coords)) inside = pointInPoly([lat,lon], g.coords);
+    else if(g.type==='bbox' && g.coords && g.coords.length===4){
+      const [swLat,swLng,neLat,neLng] = g.coords; inside = (lat>=swLat && lat<=neLat && lon>=swLng && lon<=neLng);
+    }
+    geoState[uid] = geoState[uid]||{};
+    const prev = !!geoState[uid][gid];
+    if(inside && !prev){ pushAlert(uid,'GEOFENCE_ENTER',{geofence:gid,name:g.name}); geoState[uid][gid]=true; }
+    if(!inside && prev){ pushAlert(uid,'GEOFENCE_EXIT',{geofence:gid,name:g.name}); geoState[uid][gid]=false; }
+  });
+}
+
+/* integrate anomaly on live/patroli updates */
+liveRef.on('value', snap=>{
+  const obj = snap.val()||{};
+  Object.keys(obj).forEach(uid=>{
+    const rec = obj[uid] || {};
+    const lg = rec.lastGps || rec.lastgps || rec.last_location || {};
+    const lat = Number(lg.lat || lg.latitude); const lon = Number(lg.lon || lg.longitude);
+    const t = lg.time || (rec.presence && rec.presence.lastSeen) || Date.now();
+    detectFor(uid, lat, lon, t);
+  });
+});
+patroliRef.on('child_added', snap=>{
+  const uid = snap.key; const recs = snap.val()||{};
+  Object.keys(recs).forEach(k=>{
+    const it = recs[k]; const lat = Number(it.lat||it.latitude); const lon = Number(it.lng||it.lon||it.longitude);
+    detectFor(uid, lat, lon, it.time||it.timestamp||Date.now());
+  });
+});
+patroliRef.on('child_changed', snap=>{
+  const uid = snap.key; const recs = snap.val()||{};
+  let latest = null;
+  Object.keys(recs).forEach(k=>{ const it = recs[k]; if(!latest || ((it.time||it.timestamp||0) > (latest.time||latest.timestamp||0))) latest = it; });
+  if(latest){ detectFor(uid, Number(latest.lat||latest.latitude), Number(latest.lng||latest.lon||latest.longitude), latest.time||latest.timestamp||Date.now()); }
+});
+
+/* ===================== CHAT ===================== */
+const chatRef = db.ref(DB_CHAT);
+chatSend.addEventListener('click', ()=> {
+  const t = chatInp.value.trim(); if(!t) return;
+  const u = (firebase.auth().currentUser && firebase.auth().currentUser.uid) || 'guest';
+  const name = 'Operator';
+  chatRef.push({ uid:u, name, text:t, time: Date.now() });
+  chatInp.value='';
+});
+chatRef.limitToLast(200).on('child_added', s=>{
+  const m = s.val(); if(!m) return;
+  const el = document.createElement('div'); el.className='chatRow';
+  el.style.padding='6px'; el.style.borderRadius='6px'; el.style.background='rgba(255,255,255,0.02)';
+  el.innerHTML = `<div style="min-width:64px"><b style="color:#00e6ff">${m.name||m.uid}</b><div style="font-size:11px;color:#9aa4b2">${new Date(m.time||Date.now()).toLocaleTimeString()}</div></div><div style="flex:1;color:#cfe6ff">${m.text}</div>`;
+  chatList.appendChild(el); chatList.scrollTop = chatList.scrollHeight;
+});
+
+/* ===================== UI: update render when data changes ===================== */
+function refreshUI(){
+  const uids = new Set([...Object.keys(patrolCache), ...Object.keys(liveCache)]);
+  listOrder = Array.from(uids);
+  listOrder.sort((a,b)=>{
+    const ta = (liveCache[a] && (liveCache[a].presence && liveCache[a].presence.lastSeen)) || (patrolCache[a] && patrolCache[a][0] && (patrolCache[a][0].time||patrolCache[a][0].timestamp)) || 0;
+    const tb = (liveCache[b] && (liveCache[b].presence && liveCache[b].presence.lastSeen)) || (patrolCache[b] && patrolCache[b][0] && (patrolCache[b][0].time||patrolCache[b][0].timestamp)) || 0;
+    return tb - ta;
+  });
+  renderList();
+}
+
+function renderList(){
+  elList.innerHTML='';
+  listOrder.forEach(uid=>{
+    const live = liveCache[uid] || {};
+    const last = (patrolCache[uid] && patrolCache[uid][0]) || {};
+    const name = (live.presence && live.presence.officerName) || last.name || uid;
+    const photo = last.photo || last.photoUrl || live.photoUrl || null;
+    const time = (live.presence && live.presence.lastSeen) || last.time || last.timestamp || 0;
+    const area = last.area || last.description || '';
+    
+    // ✅ GET DEVICE INFO
+    const device = last.device || live.device || {};
+    const deviceType = device.type || 'desktop';
+    const deviceBrowser = device.browser || 'Unknown';
+    const deviceOS = device.os || 'Unknown';
+    const isSpoofed = device.isSpoofed || false;
+    
+    const lastSeen = live.presence && live.presence.lastSeen;
+    const isOnline = lastSeen && (Date.now() - (lastSeen < 1e12 ? lastSeen * 1000 : lastSeen)) < 300000;
+    
+    const bboxStr = inpBbox.value.trim();
+    const lat = Number(live.lastGps && (live.lastGps.lat || live.lastGps.latitude) || last.lat || last.latitude || 0);
+    const lon = Number(live.lastGps && (live.lastGps.lon || live.lastGps.longitude) || last.lng || last.lon || last.longitude || 0);
+    if(bboxStr && (!inBbox(lat,lon,bboxStr))) return;
+    
+    const row = document.createElement('div'); 
+    row.className = `list-item ${isOnline ? 'online' : 'offline'}`; 
+    row.id='li-'+uid;
+    
+    // Device icon
+    let deviceIcon = '💻';
+    if (deviceType === 'mobile') deviceIcon = '📱';
+    else if (deviceType === 'tablet') deviceIcon = '📟';
+    
+    row.innerHTML = `
+      <div class="thumb">
+        <div class="status-indicator ${isOnline ? 'status-online' : 'status-offline'}"></div>
+      </div>
+      <div class="meta">
+        <h4>${name} ${isSpoofed ? '🔧' : ''}</h4>
+        <p>${area} • ${fmtTs(time)} • ${isOnline ? '🟢 ONLINE' : '🔴 OFFLINE'}</p>
+        <div class="device-info ${isSpoofed ? 'spoofed' : ''}">
+          ${deviceIcon} ${deviceBrowser} on ${deviceOS}
+          ${isSpoofed ? ' (SPOOFED)' : ''}
+        </div>
+      </div>`;
+    row.onclick = ()=> selectUid(uid);
+    elList.appendChild(row);
+    row._rec = { uid, name, lat, lon, time, area };
+  });
+}
+
+/* ✅ FIX (v3): blok listener duplikat di bawah ini SEBELUMNYA menimpa
+   patrolCache/liveCache dengan snapshot Firebase MENTAH (uid -> {pushId:record}),
+   merusak struktur array [{...},{...}] yang sudah dibangun benar oleh
+   processPatroliSnapshot()/processLiveSnapshot() di atas (dipakai oleh Replay,
+   Export, dan sekarang juga oleh Management Engine untuk compliance/distance
+   per petugas). processPatroliSnapshot()/processLiveSnapshot() sudah memanggil
+   renderList() sendiri, jadi listener duplikat ini dihapus (bukan fitur yang
+   hilang — hanya listener redundan yang menyebabkan bug/crash pada Start Replay
+   & data compliance officer/area). Tidak ada fungsi/menu yang dihapus.
+   Referensi: DB_PATROLI = /patroli, DB_LIVE = /live (tetap sama). */
+
+
+/* ===================== PANIC ALERT HANDLING ===================== */
+function stopPanicAudio(){
+  try{
+    if(panicInterval){ clearInterval(panicInterval); panicInterval = null; }
+    if(panicOsc){ panicOsc.stop(); panicOsc.disconnect(); panicOsc = null; }
+    if(panicCtx){ panicCtx.close(); panicCtx = null; }
+  }catch(e){}
+  if(panicPlayer){
+    try{ panicPlayer.pause(); }catch(e){}
+  }
+}
+
+function startPanicAudio(alert){
+  const kind = (alert && alert.soundKey) || 'siren';
+  if(kind === 'custom' && alert && alert.soundDataUrl){
+    stopPanicAudio();
+    if(!panicPlayer){
+      panicPlayer = new Audio();
+      panicPlayer.loop = true;
+    }
+    panicPlayer.src = alert.soundDataUrl;
+    panicPlayer.currentTime = 0;
+    panicPlayer.play().catch(()=>{});
+    return;
+  }
+  stopPanicAudio();
+  try{
+    panicCtx = new (window.AudioContext || window.webkitAudioContext)();
+    panicOsc = panicCtx.createOscillator();
+    panicGain = panicCtx.createGain();
+    panicOsc.connect(panicGain);
+    panicGain.connect(panicCtx.destination);
+    panicOsc.type = 'sine';
+    let base = 880, low = 440;
+    if(kind === 'siren'){
+      panicOsc.frequency.value = low;
+      let up = true;
+      panicInterval = setInterval(function(){
+        panicOsc.frequency.value = up ? base : low;
+        up = !up;
+      }, 500);
+    } else if(kind === 'beep'){
+      panicOsc.frequency.value = base;
+      panicInterval = setInterval(function(){
+        panicGain.gain.setValueAtTime(0.0, panicCtx.currentTime);
+        panicGain.gain.linearRampToValueAtTime(0.6, panicCtx.currentTime + 0.05);
+        panicGain.gain.linearRampToValueAtTime(0.0, panicCtx.currentTime + 0.25);
+      }, 350);
+    } else { // bell
+      panicOsc.frequency.value = 900;
+      panicGain.gain.setValueAtTime(0.0, panicCtx.currentTime);
+      panicGain.gain.linearRampToValueAtTime(0.9, panicCtx.currentTime + 0.01);
+      panicGain.gain.exponentialRampToValueAtTime(0.01, panicCtx.currentTime + 1.2);
+    }
+    panicGain.gain.value = 0.4;
+    panicOsc.start();
+  }catch(e){}
+}
+
+/* listen for panic alerts */
+alertsRef.on('value', function(snap){
+  alertsCache = snap.val() || {};
+  panicActiveUids = {};
+  let firstActive = null;
+
+  Object.keys(alertsCache).forEach(function(uid){
+    const a = alertsCache[uid];
+    const row = document.getElementById('li-' + uid);
+    if(a && a.active){
+      panicActiveUids[uid] = true;
+      if(row) row.classList.add('panic-active');
+      if(!firstActive) firstActive = uid;
+    }else{
+      if(row) row && row.classList.remove('panic-active');
+    }
+  });
+
+  // 🔁 Atur kedip merah via JavaScript agar tidak pernah berhenti sendiri
+  if(panicBlinkTimer){
+    clearInterval(panicBlinkTimer);
+    panicBlinkTimer = null;
+  }
+  const activeUids = Object.keys(panicActiveUids);
+  if(activeUids.length){
+    panicBlinkTimer = setInterval(function(){
+      activeUids.forEach(function(uid){
+        const row = document.getElementById('li-' + uid);
+        if(!row) return;
+        const state = row.getAttribute('data-panic-blink') === '1';
+        if(state){
+          row.setAttribute('data-panic-blink','0');
+          row.style.backgroundColor = 'rgba(255,0,85,0.12)';
+        }else{
+          row.setAttribute('data-panic-blink','1');
+          row.style.backgroundColor = 'rgba(255,0,85,0.40)';
+        }
+      });
+    }, 500);
+  }else{
+    // tidak ada panic: bersihkan style
+    document.querySelectorAll('.list-item').forEach(function(row){
+      row.removeAttribute('data-panic-blink');
+      row.style.backgroundColor = '';
+    });
+  }
+
+  if(firstActive){
+    currentPanicUid = firstActive;
+    // Auto fokus ke petugas yang panic jika belum ada yang dipilih / bukan panic
+    if(!selectedUid || !panicActiveUids[selectedUid]){
+      try{ selectUid(firstActive); }catch(e){}
+    }
+    startPanicAudio(alertsCache[firstActive]);
+  }else{
+    currentPanicUid = null;
+    stopPanicAudio();
+  }
+});
+/* show floating alert */
+function showAlert(msg){
+  const div = document.createElement('div'); div.className='alertFloat'; div.innerText = msg;
+  document.body.appendChild(div); setTimeout(()=>{ div.remove(); }, 7000);
+}
+
+/* Event listeners for new features */
+addManual.addEventListener('click', addManualOfficer);
+deepClean.addEventListener('click', performDeepClean);
+const btnStopAlarm = document.getElementById('btnStopAlarm');
+if(btnStopAlarm){
+  btnStopAlarm.addEventListener('click', function(){
+    if(currentPanicUid){
+      db.ref(DB_ALERTS + '/' + currentPanicUid).update({ active:false, time: Date.now() });
+    }
+    stopPanicAudio();
+  });
+}
+
+
+// Initialize manual data
+integrateManualData();
+renderManualList();
+
+/* final: log connected */
+db.ref('.info/connected').on('value', s=>{ var connected=!!s.val(); if(typeof window.setFirebaseStatus==='function') window.setFirebaseStatus(connected); if(!connected) console.warn('firebase disconnected'); });
+
+console.log('CYBER PATROL SYSTEM initialized with device detection');
+</script>
+
+
+<!-- ================================================================ -->
+<!-- ✅ ADDITIVE ENGINE: LIVE TRACK LINE + CHECKPOINT VISUALIZATION     -->
+<!-- Tidak menghapus/mengubah fitur lama (Replay, Search, Follow,     -->
+<!-- Sound, Export, Manual Officer, Deep Clean, Chat, Panic, Geofence)-->
+<!-- ================================================================ -->
+<script>
+(function(){
+  'use strict';
+
+  var liveTrackLines   = {};   // uid -> L.polyline (garis LIVE, terpisah dari trackLines milik Replay)
+  var liveTrackLatLngs = {};   // uid -> [[lat,lon], ...]
+  var liveTrackSeenKeys= {};   // uid -> {tsKey:true} dedup
+  var restoredUids     = {};   // uid -> true (sudah rebuild dari histori Firebase)
+  var trackListeners    = {};  // uid -> true (listener child_added sudah dipasang)
+  var replayingUid      = null;// uid yang sedang direplay -> live line uid ini dipause agar tidak tabrakan visual
+  var cpDefsCache       = {};  // uid -> [{id,name,lat,lon,radius}]
+  var cpStatusCache     = {};  // uid -> {cpId:{status,name,time}}
+  var cpMarkers         = {};  // uid -> {cpId: L.circleMarker}
+  var pageLoadTime      = Date.now();
+
+  function statusColor(s){
+    if(s==='VISITED') return '#00ff88';
+    if(s==='NEXT')    return '#ffd23f';
+    if(s==='MISSED')  return '#ff3b3b';
+    return '#8892a0';
+  }
+
+  /* ================= LIVE TRACK LINE ================= */
+  function appendLiveTrackPoint(uid, lat, lon, tsKey){
+    if(!lat || !lon) return;
+    if(!liveTrackSeenKeys[uid]) liveTrackSeenKeys[uid] = {};
+    if(liveTrackSeenKeys[uid][tsKey]) return; // dedup: 1 titik GPS = 1 titik track
+    liveTrackSeenKeys[uid][tsKey] = true;
+
+    if(!liveTrackLatLngs[uid]) liveTrackLatLngs[uid] = [];
+    liveTrackLatLngs[uid].push([lat, lon]);
+    if(liveTrackLatLngs[uid].length > 1000){
+      liveTrackLatLngs[uid] = liveTrackLatLngs[uid].slice(-1000);
+    }
+
+    if(replayingUid === uid) return; // saat replay aktif utk uid ini, jangan timpa visual replay
+
+    try{
+      if(!liveTrackLines[uid]){
+        liveTrackLines[uid] = L.polyline(liveTrackLatLngs[uid], {color:'#39ff88', weight:3, opacity:0.8}).addTo(map);
+      } else {
+        liveTrackLines[uid].setLatLngs(liveTrackLatLngs[uid]);
+      }
+    }catch(e){ console.warn('appendLiveTrackPoint render error', e); }
+  }
+
+  function restoreLiveTrack(uid){
+    // bangun kembali track dari histori /live/{uid}/track jika Command Center di-reload
+    try{
+      db.ref(DB_LIVE).child(uid).child('track').limitToLast(1000).once('value').then(function(snap){
+        var obj = snap.val() || {};
+        var pts = Object.keys(obj).map(function(k){ return { k:k, v:obj[k] }; });
+        pts.sort(function(a,b){ return (Number(a.v.time)||Number(a.k)||0) - (Number(b.v.time)||Number(b.k)||0); });
+        pts.forEach(function(p){
+          if(p.v && p.v.lat && p.v.lon) appendLiveTrackPoint(uid, p.v.lat, p.v.lon, p.k);
+        });
+      }).catch(function(e){ console.warn('restoreLiveTrack error', e); });
+    }catch(e){ console.warn('restoreLiveTrack error', e); }
+  }
+
+  function ensureRestored(uid){
+    if(restoredUids[uid]) return;
+    restoredUids[uid] = true;
+    restoreLiveTrack(uid);
+  }
+
+  function attachTrackListener(uid){
+    if(trackListeners[uid]) return;
+    trackListeners[uid] = true;
+    ensureRestored(uid);
+    try{
+      db.ref(DB_LIVE).child(uid).child('track').limitToLast(1).on('child_added', function(snap){
+        var v = snap.val();
+        if(v && v.lat && v.lon) appendLiveTrackPoint(uid, v.lat, v.lon, snap.key);
+      });
+    }catch(e){ console.warn('attachTrackListener error', e); }
+  }
+
+  /* Hook ke processLiveSnapshot yang SUDAH ADA (deklarasi function top-level = properti window,
+     jadi override ini otomatis dipakai oleh listener liveRef.on('value', ...) yang lama) */
+  if(typeof window.processLiveSnapshot === 'function'){
+    var _origProcessLiveSnapshot = window.processLiveSnapshot;
+    window.processLiveSnapshot = function(obj){
+      _origProcessLiveSnapshot(obj);
+      Object.keys(obj||{}).forEach(function(uid){ attachTrackListener(uid); });
+    };
+  }
+
+  /* ================= REPLAY COEXISTENCE (LIVE + HISTORICAL, tidak saling menimpa) ================= */
+  var _btnStartReplay = document.getElementById('startReplay');
+  var _btnStopReplay  = document.getElementById('stopReplay');
+  if(_btnStartReplay){
+    _btnStartReplay.addEventListener('click', function(){
+      replayingUid = window.selectedUid || null;
+      if(replayingUid && liveTrackLines[replayingUid]){
+        try{ map.removeLayer(liveTrackLines[replayingUid]); }catch(e){}
+        delete liveTrackLines[replayingUid];
+      }
+    });
+  }
+  if(_btnStopReplay){
+    _btnStopReplay.addEventListener('click', function(){
+      var uid = replayingUid;
+      replayingUid = null;
+      if(uid && liveTrackLatLngs[uid] && liveTrackLatLngs[uid].length){
+        try{ liveTrackLines[uid] = L.polyline(liveTrackLatLngs[uid], {color:'#39ff88', weight:3, opacity:0.8}).addTo(map); }catch(e){}
+      }
+    });
+  }
+
+  /* ================= CHECKPOINT VISUALIZATION ================= */
+  function renderCheckpointsForUid(uid){
+    var defs = cpDefsCache[uid] || [];
+    var statuses = cpStatusCache[uid] || {};
+    if(!cpMarkers[uid]) cpMarkers[uid] = {};
+    var seen = {};
+    defs.forEach(function(cp){
+      if(!cp || cp.lat == null || cp.lon == null) return;
+      seen[cp.id] = true;
+      var st = (statuses[cp.id] && statuses[cp.id].status) || 'PENDING';
+      var color = statusColor(st);
+      try{
+        if(!cpMarkers[uid][cp.id]){
+          var marker = L.circleMarker([cp.lat, cp.lon], {radius:8, color:color, fillColor:color, fillOpacity:0.6, weight:2}).addTo(map);
+          marker.bindTooltip((cp.name||cp.id) + ' • ' + st);
+          cpMarkers[uid][cp.id] = marker;
+        } else {
+          cpMarkers[uid][cp.id].setStyle({color:color, fillColor:color});
+          cpMarkers[uid][cp.id].setLatLng([cp.lat, cp.lon]);
+          cpMarkers[uid][cp.id].setTooltipContent((cp.name||cp.id) + ' • ' + st);
+        }
+      }catch(e){ console.warn('renderCheckpointsForUid error', e); }
+    });
+    Object.keys(cpMarkers[uid]).forEach(function(cpId){
+      if(!seen[cpId]){
+        try{ map.removeLayer(cpMarkers[uid][cpId]); }catch(e){}
+        delete cpMarkers[uid][cpId];
+      }
+    });
+  }
+
+  try{
+    db.ref('checkpoints').on('value', function(snap){
+      var obj = snap.val() || {};
+      Object.keys(obj).forEach(function(uid){
+        cpDefsCache[uid]   = (obj[uid] && obj[uid].defs)   || [];
+        cpStatusCache[uid] = (obj[uid] && obj[uid].status) || {};
+        renderCheckpointsForUid(uid);
+      });
+      renderCheckpointPanel();
+    }, function(e){ console.warn('checkpoints listener error', e); });
+  }catch(e){ console.warn('checkpoints ref error', e); }
+
+  /* ================= PANEL STATUS CHECKPOINT (disisipkan additive di bawah list petugas) ================= */
+  function buildCheckpointPanel(){
+    if(document.getElementById('cpStatusPanel')) return;
+    var listDiv = document.getElementById('list');
+    if(!listDiv || !listDiv.parentNode) return;
+    var panel = document.createElement('div');
+    panel.id = 'cpStatusPanel';
+    panel.style.marginTop = '10px';
+    panel.innerHTML = '<div style="font-weight:700;margin-bottom:6px">Checkpoint Status</div><div id="cpStatusList" class="muted" style="font-size:12px">Pilih petugas untuk melihat status checkpoint.</div>';
+    listDiv.parentNode.insertBefore(panel, listDiv.nextSibling);
+  }
+  function renderCheckpointPanel(){
+    buildCheckpointPanel();
+    var host = document.getElementById('cpStatusList');
+    if(!host) return;
+    var uid = window.selectedUid;
+    if(!uid || !cpDefsCache[uid] || !cpDefsCache[uid].length){
+      host.innerHTML = '<span class="muted">Belum ada checkpoint GPS untuk petugas ini.</span>';
+      return;
+    }
+    var defs = cpDefsCache[uid], statuses = cpStatusCache[uid] || {};
+    host.innerHTML = defs.map(function(cp, idx){
+      var st = (statuses[cp.id] && statuses[cp.id].status) || 'PENDING';
+      var icon = st==='VISITED' ? '🟢' : st==='NEXT' ? '🟡' : st==='MISSED' ? '🔴' : '⚪';
+      return '<div style="padding:3px 0">' + icon + ' ' + (idx+1) + '. ' + (cp.name||cp.id) + ' — ' + st + '</div>';
+    }).join('');
+  }
+
+  if(typeof window.selectUid === 'function'){
+    var _origSelectUid = window.selectUid;
+    window.selectUid = function(uid){
+      _origSelectUid(uid);
+      renderCheckpointPanel();
+    };
+  }
+
+  /* ================= MISSED CHECKPOINT ALERT FEED (pakai /alerts yang sudah ada) ================= */
+  function buildMissedAlertPanel(){
+    if(document.getElementById('cpMissedPanel')) return;
+    var panel = document.createElement('div');
+    panel.id = 'cpMissedPanel';
+    panel.style.position = 'fixed';
+    panel.style.top = '70px';
+    panel.style.right = '16px';
+    panel.style.width = '300px';
+    panel.style.maxHeight = '280px';
+    panel.style.overflowY = 'auto';
+    panel.style.zIndex = '10001';
+    document.body.appendChild(panel);
+  }
+  function showMissedCheckpointCard(a){
+    buildMissedAlertPanel();
+    var panel = document.getElementById('cpMissedPanel');
+    var card = document.createElement('div');
+    card.style.background = 'rgba(255,59,59,0.15)';
+    card.style.border = '1px solid #ff3b3b';
+    card.style.borderRadius = '8px';
+    card.style.padding = '10px';
+    card.style.marginBottom = '8px';
+    card.style.color = '#ffd9d9';
+    card.style.fontSize = '12px';
+    var officer = (a.details && a.details.officerName) || a.uid || '-';
+    var cpName  = (a.details && a.details.checkpointName) || '-';
+    card.innerHTML = '<b>🔴 CHECKPOINT MISSED</b><br>Petugas: ' + officer +
+      '<br>Checkpoint: ' + cpName +
+      '<br>Waktu: ' + new Date(a.time||Date.now()).toLocaleString();
+    panel.appendChild(card);
+    setTimeout(function(){ if(card.parentNode) card.parentNode.removeChild(card); }, 15000);
+  }
+
+  try{
+    db.ref('/alerts').on('child_added', function(snap){
+      var a = snap.val();
+      if(!a || a.type !== 'CHECKPOINT_MISSED') return;
+      if((a.time||0) < pageLoadTime - 5000) return; // jangan replay histori lama saat baru load halaman
+      showMissedCheckpointCard(a);
+      try{ if(typeof beep === 'function') beep(); }catch(e){}
+      try{ if(typeof showAlert === 'function') showAlert('🔴 CHECKPOINT MISSED • ' + (a.details && a.details.officerName) + ' • ' + (a.details && a.details.checkpointName)); }catch(e){}
+    }, function(e){ console.warn('alerts listener error', e); });
+  }catch(e){ console.warn('alerts ref error', e); }
+
+  console.log('✅ Live-track + Checkpoint visualization engine attached (additive, fitur lama tetap utuh)');
+})();
+</script>
+<!-- ============== END ADDITIVE ENGINE ============== -->
+
+<!-- ================================================================ -->
+<!-- ✅ ADDITIVE ENGINE: SECURITY OPERATIONS MANAGEMENT & COMMAND SYSTEM -->
+<!-- Read-only terhadap patrolCache/liveCache/listOrder/alertsCache/    -->
+<!-- panicActiveUids/checkpoints. Menulis HANYA ke /incidents, /risks,  -->
+<!-- /management/panicLog. Tidak mengubah DB atau fitur lama.          -->
+<!-- ================================================================ -->
+<script>
+/* ================================================================ */
+/* ✅ ADDITIVE ENGINE: SECURITY OPERATIONS MANAGEMENT & COMMAND SYS  */
+/* Membaca data existing (patrolCache, liveCache, listOrder,        */
+/* alertsCache, panicActiveUids, checkpoints) secara read-only,     */
+/* menulis HANYA ke path baru: /incidents, /risks, /management/*    */
+/* Tidak mengubah fungsi/alur/DB lama sama sekali.                  */
+/* ================================================================ */
+(function(){
+  'use strict';
+  const N = 'N/A';
+  const DB_INCIDENTS = '/incidents';
+  const DB_RISKS = '/risks';
+  const DB_PANIC_LOG = '/management/panicLog';
+  const RISK_CATEGORIES = ['People','Asset','Facility','Access Control','Fire/Life Safety','CCTV','Perimeter','Unauthorized Access','Theft','Safety','Operational Risk'];
+  const INCIDENT_CATEGORIES = ['Unauthorized Access','Theft','Safety','Fire/Life Safety','CCTV/Surveillance','Access Control','Asset','Perimeter Breach','Operational','Other'];
+  const CUSTOM_AREA_VAL = '__CUSTOM__';
+  /* SAVE HARDENING: management writes wait for Firebase auth before writing. */
+  /* ---- FINDING LIFECYCLE (Task 3) ---- */
+  const FINDING_STATUSES = ['NEW','ACKNOWLEDGED','ASSIGNED','IN PROGRESS','REPAIR COMPLETED','VERIFIED','CLOSED','REOPENED'];
+  const FINDING_NEXT = { 'NEW':['ACKNOWLEDGED'], 'ACKNOWLEDGED':['ASSIGNED'], 'ASSIGNED':['IN PROGRESS'], 'IN PROGRESS':['REPAIR COMPLETED'], 'REPAIR COMPLETED':['VERIFIED'], 'VERIFIED':['CLOSED'], 'CLOSED':['REOPENED'], 'REOPENED':['IN PROGRESS'] };
+  const FINDING_TS_FIELD = { 'ACKNOWLEDGED':'acknowledgedAt', 'ASSIGNED':'assignedAt', 'IN PROGRESS':'repairStartedAt', 'REPAIR COMPLETED':'repairCompletedAt', 'VERIFIED':'verifiedAt', 'CLOSED':'closedAt' };
+  const FINDING_BY_FIELD = { 'ACKNOWLEDGED':'acknowledgedBy', 'ASSIGNED':'assignedBy', 'IN PROGRESS':'repairBy', 'REPAIR COMPLETED':'repairBy', 'VERIFIED':'verifiedBy', 'CLOSED':'closedBy' };
+  const FINDING_NOTE_FIELD = { 'ACKNOWLEDGED':'acknowledgementNote', 'REPAIR COMPLETED':'repairNote', 'VERIFIED':'verificationNote', 'CLOSED':'closureNote' };
+  const FINDING_EVID_FIELD = { 'REPAIR COMPLETED':'repairEvidence', 'VERIFIED':'verificationEvidence' };
+  function isOpenFindingStatus(st){ return !!st && ['CLOSED','RESOLVED'].indexOf(st)===-1; }
+
+  let mgmtCpCache = {};       // uid -> {defs:[], status:{}, officerName}
+  let incidentsCache = {};    // key -> incident
+  let risksCache = {};        // key -> risk
+  let panicLogCache = {};     // key -> panic log entry
+  let execViewOn = false;
+  let currentMTab = 'exec';
+  let findingFilter = 'ALL';
+  let _seenPanicActive = {};
+
+  /* ================================================================ */
+  /* FORM STATE PRESERVATION (fix: form reset saat Firebase realtime  */
+  /* update / auto-refresh terjadi ketika user sedang mengisi form)   */
+  /* ================================================================ */
+  const INCIDENT_DRAFT_FIELDS = ['inArea','inAreaCustom','inLocation','inCategory','inSeverity','inReporter','inAssigned','inTargetDate','inRootCause','inCorrective','inEvidence','inDesc'];
+  const RISK_DRAFT_FIELDS = ['rkArea','rkAreaCustom','rkCategory','rkLevel','rkFreq','rkTrend','rkStatus','rkNotes'];
+  let incidentDraft = {};
+  let riskDraft = {};
+
+  /* ================================================================ */
+  /* PHOTO EVIDENCE (Camera + Gallery, multiple, preview, delete)     */
+  /* ================================================================ */
+  let incidentPhotos = [];   // {dataUrl, name} pending for new incident form
+  let advancePhotos = [];    // {dataUrl, name} pending for lifecycle advance modal
+  let advanceContext = null; // {key, nextStatus}
+
+  function ensureAuth(){
+    return new Promise(function(resolve, reject){
+      try{
+        const a = firebase.auth();
+        if(a.currentUser){ resolve(a.currentUser); return; }
+        let done = false;
+        const unsub = a.onAuthStateChanged(function(u){
+          if(done) return; done = true;
+          try{ unsub(); }catch(e){}
+          if(u) resolve(u); else reject(new Error('Firebase Authentication belum tersedia'));
+        });
+        a.signInAnonymously().catch(function(err){
+          if(done) return; done = true;
+          try{ unsub(); }catch(e){}
+          reject(err);
+        });
+        setTimeout(function(){
+          if(done) return; done = true;
+          try{ unsub(); }catch(e){}
+          reject(new Error('Firebase Authentication timeout'));
+        }, 8000);
+      }catch(e){ reject(e); }
+    });
+  }
+
+  function readFileAsDataUrl(file){
+    return new Promise(function(resolve, reject){
+      const reader = new FileReader();
+      reader.onload = function(){ resolve(reader.result); };
+      reader.onerror = function(){ reject(reader.error || new Error('Gagal membaca file foto')); };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function addPhotosFromFileList(fileList, targetArr, rerenderFn){
+    Array.from(fileList || []).forEach(function(file){
+      readFileAsDataUrl(file).then(function(dataUrl){
+        targetArr.push({dataUrl: dataUrl, name: file.name || ('photo_' + Date.now() + '.jpg')});
+        rerenderFn();
+      }).catch(function(err){ console.warn('photo read error', err); });
+    });
+  }
+
+  function renderPhotoPreviewInto(elId, arr){
+    const wrap = document.getElementById(elId);
+    if(!wrap) return;
+    wrap.innerHTML = arr.map(function(p, idx){
+      return '<div class="photo-thumb"><img src="' + p.dataUrl + '"/><div class="rm" data-idx="' + idx + '">✕</div></div>';
+    }).join('');
+    wrap.querySelectorAll('.rm').forEach(function(el){
+      el.addEventListener('click', function(){
+        const idx = parseInt(el.getAttribute('data-idx'), 10);
+        arr.splice(idx, 1);
+        renderPhotoPreviewInto(elId, arr);
+      });
+    });
+  }
+
+  /* Upload photos: gunakan Firebase Storage bila tersedia, jika tidak
+     fallback menyimpan dataUrl langsung ke Realtime Database (status
+     sebenarnya ditampilkan, tidak ada upload palsu). */
+  function uploadEvidencePhotos(findingKey, photos, stage){
+    if(!photos || !photos.length) return Promise.resolve([]);
+    let storageRef = null;
+    try{ if(firebase.storage) storageRef = firebase.storage().ref(); }catch(e){ storageRef = null; }
+    if(storageRef){
+      return Promise.all(photos.map(function(p, idx){
+        const path = 'incidents/' + findingKey + '/' + Date.now() + '_' + idx + '_' + (p.name || 'photo.jpg').replace(/[^a-zA-Z0-9_.-]/g,'_');
+        return storageRef.child(path).putString(p.dataUrl, 'data_url')
+          .then(function(snap){ return snap.ref.getDownloadURL(); })
+          .then(function(url){ return {url: url, name: p.name || 'photo.jpg', stage: stage || 'GENERAL', embedded:false}; })
+          .catch(function(err){
+            console.warn('Firebase Storage upload gagal, fallback simpan langsung:', err);
+            return {url: p.dataUrl, name: p.name || 'photo.jpg', stage: stage || 'GENERAL', embedded:true};
+          });
+      }));
+    }
+    return Promise.resolve(photos.map(function(p){
+      return {url: p.dataUrl, name: p.name || 'photo.jpg', stage: stage || 'GENERAL', embedded:true};
+    }));
+  }
+
+  function captureFormDraft(fields, draft){
+    fields.forEach(function(id){
+      const el = document.getElementById(id);
+      if(el) draft[id] = el.value;
+    });
+  }
+  function restoreFormDraft(fields, draft, customSelectId, customWrapId){
+    fields.forEach(function(id){
+      const el = document.getElementById(id);
+      if(el && draft[id] !== undefined && draft[id] !== ''){
+        el.value = draft[id];
+      }
+    });
+    if(customSelectId && customWrapId){
+      const sel = document.getElementById(customSelectId);
+      const wrap = document.getElementById(customWrapId);
+      if(sel && wrap){
+        wrap.style.display = (sel.value === CUSTOM_AREA_VAL) ? 'block' : 'none';
+      }
+    }
+  }
+  function attachDraftAutoCapture(fields, draft){
+    fields.forEach(function(id){
+      const el = document.getElementById(id);
+      if(el){
+        el.addEventListener('input', function(){ draft[id] = el.value; });
+        el.addEventListener('change', function(){ draft[id] = el.value; });
+      }
+    });
+  }
+  function captureActiveElementInfo(){
+    const el = document.activeElement;
+    if(!el || !el.id) return null;
+    const info = { id: el.id };
+    if(typeof el.selectionStart === 'number'){
+      info.selStart = el.selectionStart;
+      info.selEnd = el.selectionEnd;
+    }
+    return info;
+  }
+  function restoreFocus(activeInfo, fields){
+    if(!activeInfo || !activeInfo.id) return;
+    if(fields.indexOf(activeInfo.id) === -1) return;
+    const el = document.getElementById(activeInfo.id);
+    if(!el) return;
+    try{
+      el.focus();
+      if(typeof activeInfo.selStart === 'number' && (el.tagName==='INPUT' || el.tagName==='TEXTAREA')){
+        el.setSelectionRange(activeInfo.selStart, activeInfo.selEnd);
+      }
+    }catch(e){}
+  }
+
+  const overlay = document.getElementById('mgmtOverlay');
+  const btnOpenMgmt = document.getElementById('btnOpenMgmt');
+  const btnCloseMgmt = document.getElementById('btnCloseMgmt');
+  const btnExecView = document.getElementById('btnExecView');
+  const btnMgmtReportTxt = document.getElementById('btnMgmtReportTxt');
+  const btnMgmtReportPdf = document.getElementById('btnMgmtReportPdf');
+  const mgmtTabs = document.querySelectorAll('.mgmt-tab');
+
+  function esc(s){ return String(s===undefined||s===null?'':s).replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+  function isNum(v){ return typeof v==='number' && !isNaN(v); }
+  function pctStr(v){ return isNum(v) ? (Math.round(v*10)/10)+'%' : N; }
+  function badgeSeverity(sev){
+    const cls = {CRITICAL:'badge-critical',HIGH:'badge-high',MEDIUM:'badge-medium',LOW:'badge-low'}[sev] || 'badge-na';
+    return '<span class="badge '+cls+'">'+esc(sev||N)+'</span>';
+  }
+  function badgeStatus(st){ return '<span class="badge badge-status">'+esc(st||N)+'</span>'; }
+  function fmtDur(ms){
+    if(!isNum(ms) || ms<0) return N;
+    const m = Math.round(ms/60000);
+    if(m<60) return m+' min';
+    const h = Math.floor(m/60), rm = m%60;
+    return h+'j '+rm+'m';
+  }
+  function fmtDate(ts){
+    if(!ts) return N;
+    const d = new Date(ts);
+    if(isNaN(d)) return N;
+    return d.toLocaleString('id-ID');
+  }
+
+  /* ---------------- DATA LISTENERS ---------------- */
+  try{
+    db.ref('checkpoints').on('value', function(snap){
+      mgmtCpCache = snap.val() || {};
+      if(overlay.style.display !== 'none') renderCurrentTab();
+    });
+  }catch(e){ console.warn('mgmt checkpoints listener error', e); }
+
+  db.ref(DB_INCIDENTS).on('value', function(snap){
+    incidentsCache = snap.val() || {};
+    if(overlay.style.display !== 'none') renderCurrentTab();
+  }, function(e){ console.warn('incidents listener error', e); });
+
+  db.ref(DB_RISKS).on('value', function(snap){
+    risksCache = snap.val() || {};
+    if(overlay.style.display !== 'none') renderCurrentTab();
+  }, function(e){ console.warn('risks listener error', e); });
+
+  db.ref(DB_PANIC_LOG).limitToLast(300).on('value', function(snap){
+    panicLogCache = snap.val() || {};
+    if(overlay.style.display !== 'none') renderCurrentTab();
+  }, function(e){ console.warn('panic log listener error', e); });
+
+  /* observe existing panic flag (read-only) to build a genuine response-time log without touching /alerts logic */
+  function observePanic(){
+    try{
+      const active = (typeof panicActiveUids !== 'undefined') ? panicActiveUids : {};
+      Object.keys(active).forEach(function(uid){
+        if(!_seenPanicActive[uid]){
+          _seenPanicActive[uid] = Date.now();
+          db.ref(DB_PANIC_LOG).push({uid:uid, startTime:Date.now(), status:'ACTIVE'});
+        }
+      });
+      Object.keys(_seenPanicActive).forEach(function(uid){
+        if(!active[uid]){
+          const start = _seenPanicActive[uid];
+          delete _seenPanicActive[uid];
+          db.ref(DB_PANIC_LOG).orderByChild('uid').equalTo(uid).limitToLast(5).once('value').then(function(s){
+            const o = s.val()||{};
+            Object.keys(o).forEach(function(k){
+              if(o[k].status==='ACTIVE'){
+                db.ref(DB_PANIC_LOG).child(k).update({status:'RESOLVED', endTime:Date.now(), responseTimeMs: Date.now()-(o[k].startTime||start)});
+              }
+            });
+          }).catch(function(){});
+        }
+      });
+    }catch(e){}
+  }
+  setInterval(observePanic, 4000);
+
+  /* ---------------- READ-ONLY HELPERS on existing data ---------------- */
+  function getAllUids(){
+    const s = new Set();
+    if(typeof listOrder !== 'undefined') listOrder.forEach(u=>s.add(u));
+    return Array.from(s);
+  }
+  function isOnline(uid){
+    const live = (typeof liveCache !== 'undefined' && liveCache[uid]) || {};
+    const ls = live.presence && live.presence.lastSeen;
+    if(!ls) return false;
+    const ms = ls < 1e12 ? ls*1000 : ls;
+    return (Date.now()-ms) < 300000;
+  }
+  function officerName(uid){
+    const live = (typeof liveCache !== 'undefined' && liveCache[uid]) || {};
+    const last = (typeof patrolCache !== 'undefined' && patrolCache[uid] && patrolCache[uid][0]) || {};
+    return (live.presence && live.presence.officerName) || last.name || uid;
+  }
+  function officerArea(uid){
+    const last = (typeof patrolCache !== 'undefined' && patrolCache[uid] && patrolCache[uid][0]) || {};
+    return last.area || last.description || 'UNASSIGNED';
+  }
+  function cpDataFor(uid){
+    const rec = mgmtCpCache[uid] || {};
+    const defs = rec.defs || [];
+    const status = rec.status || {};
+    const visited = defs.filter(d=> status[d.id] && status[d.id].status==='VISITED').length;
+    const missed = defs.filter(d=> status[d.id] && status[d.id].status==='MISSED').length;
+    return {total:defs.length, visited:visited, missed:missed, defs:defs, status:status};
+  }
+  function complianceFor(uid){
+    const d = cpDataFor(uid);
+    return d.total>0 ? (d.visited/d.total*100) : null;
+  }
+  function computeGlobalCompliance(){
+    const uids = getAllUids();
+    let totalCp=0, visitedCp=0, missedCp=0, withCp=0;
+    uids.forEach(function(uid){
+      const d = cpDataFor(uid);
+      if(d.total>0){ withCp++; totalCp+=d.total; visitedCp+=d.visited; missedCp+=d.missed; }
+    });
+    return { totalCp:totalCp, visitedCp:visitedCp, missedCp:missedCp, withCp:withCp, pct: totalCp>0 ? (visitedCp/totalCp*100) : null };
+  }
+  function getEventAlerts(sinceMs){
+    const out = [];
+    const cache = (typeof alertsCache !== 'undefined') ? alertsCache : {};
+    Object.keys(cache).forEach(function(k){
+      const a = cache[k];
+      if(a && a.type){ if(!sinceMs || (a.time||0) >= sinceMs) out.push(Object.assign({_key:k}, a)); }
+    });
+    return out;
+  }
+  function getActivePanicList(){
+    const cache = (typeof alertsCache !== 'undefined') ? alertsCache : {};
+    const out = [];
+    Object.keys(cache).forEach(function(uid){
+      const a = cache[uid];
+      if(a && a.active && !a.type) out.push(Object.assign({uid:uid}, a));
+    });
+    return out;
+  }
+  function localJSONGet(key){ try{return JSON.parse(localStorage.getItem(key)||'{}')||{};}catch(e){return {};} }
+  function localJSONSet(key,val){ try{localStorage.setItem(key,JSON.stringify(val)); return true;}catch(e){console.warn('local storage unavailable',e); return false;} }
+  function incidentsArr(){
+    const merged = Object.assign({}, localJSONGet('__mgmt_incidents__'), incidentsCache);
+    return Object.keys(merged).map(function(k){ return Object.assign({_key:k}, merged[k]); });
+  }
+  function risksArr(){
+    const merged = Object.assign({}, localJSONGet('__mgmt_risks__'), risksCache);
+    return Object.keys(merged).map(function(k){ return Object.assign({_key:k}, merged[k]); });
+  }
+  function openIncidents(){ return incidentsArr().filter(function(i){ return isOpenFindingStatus(i.status); }); }
+  function openRisks(){ return risksArr().filter(function(r){ return r.openStatus !== 'MITIGATED'; }); }
+
+  /* ---------------- CORE KPI CALCULATIONS (semua dari data nyata) ---------------- */
+  function computeOperationalStatus(){
+    const uids = getAllUids();
+    const total = uids.length;
+    let online = 0;
+    uids.forEach(function(u){ if(isOnline(u)) online++; });
+    const comp = computeGlobalCompliance();
+    let completedPatrol=0, incompletePatrol=0;
+    uids.forEach(function(u){
+      const d = cpDataFor(u);
+      if(d.total>0){ if(d.visited===d.total) completedPatrol++; else incompletePatrol++; }
+    });
+    const now = Date.now();
+    const recentAlerts = getEventAlerts(now - 60*60*1000);
+    const activeAnomaly = recentAlerts.filter(function(a){ return ['HIGH_SPEED','LARGE_JUMP','LONG_STOP'].indexOf(a.type)!==-1; }).length;
+    const geoState = {};
+    getEventAlerts(0).filter(function(a){ return a.type==='GEOFENCE_ENTER'||a.type==='GEOFENCE_EXIT'; })
+      .sort(function(a,b){ return (a.time||0)-(b.time||0); })
+      .forEach(function(a){ geoState[a.uid+'|'+(a.details&&a.details.geofence)] = a.type; });
+    const activeGeofenceViol = Object.keys(geoState).filter(function(k){ return geoState[k]==='GEOFENCE_ENTER'; }).length;
+    const inc = incidentsArr();
+    const openInc = inc.filter(function(i){ return isOpenFindingStatus(i.status); });
+    const critInc = openInc.filter(function(i){ return i.severity==='CRITICAL'; });
+    return {
+      total: total, online: online, offline: total-online,
+      currentlyPatrolling: online,
+      completedPatrol: completedPatrol, incompletePatrol: incompletePatrol,
+      checkpointCompliance: comp.pct, missedCheckpoint: comp.missedCp, withCp: comp.withCp,
+      activePanic: getActivePanicList().length,
+      activeAnomaly: activeAnomaly, activeGeofenceViol: activeGeofenceViol,
+      openIncident: openInc.length, criticalIncident: critInc.length
+    };
+  }
+
+  function computeSecurityScore(){
+    const ops = computeOperationalStatus();
+    const inc = incidentsArr(), risks = risksArr();
+    const parts = [];
+    if(ops.checkpointCompliance !== null) parts.push({w:0.40, score: ops.checkpointCompliance});
+    if(inc.length>0){
+      const openInc = inc.filter(function(i){ return isOpenFindingStatus(i.status); }).length;
+      const critInc = inc.filter(function(i){ return i.severity==='CRITICAL' && isOpenFindingStatus(i.status); }).length;
+      parts.push({w:0.25, score: Math.max(0, 100 - (openInc*8 + critInc*20))});
+    }
+    if(ops.total>0){
+      const penalty = ops.activePanic*30 + ops.activeGeofenceViol*10 + ops.activeAnomaly*8;
+      parts.push({w:0.20, score: Math.max(0, 100 - penalty)});
+    }
+    if(risks.length>0){
+      const critRisk = risks.filter(function(r){ return r.riskLevel==='CRITICAL' && r.openStatus!=='MITIGATED'; }).length;
+      const highRisk = risks.filter(function(r){ return r.riskLevel==='HIGH' && r.openStatus!=='MITIGATED'; }).length;
+      parts.push({w:0.15, score: Math.max(0, 100 - (critRisk*20 + highRisk*10))});
+    }
+    if(parts.length===0) return null;
+    const totalW = parts.reduce(function(s,p){ return s+p.w; },0);
+    return Math.round(parts.reduce(function(s,p){ return s + p.score*(p.w/totalW); },0));
+  }
+
+  function computeSecurityStatus(){
+    const ops = computeOperationalStatus();
+    const risks = risksArr();
+    const critRiskOpen = risks.some(function(r){ return r.riskLevel==='CRITICAL' && r.openStatus!=='MITIGATED'; });
+    const highRiskOpen = risks.some(function(r){ return r.riskLevel==='HIGH' && r.openStatus!=='MITIGATED'; });
+    if(ops.total===0 && incidentsArr().length===0 && risks.length===0) return 'NA';
+    if(ops.activePanic>0 || ops.criticalIncident>0 || critRiskOpen) return 'RED';
+    if(ops.activeGeofenceViol>0 || ops.openIncident>0 || highRiskOpen || (isNum(ops.checkpointCompliance) && ops.checkpointCompliance<80)) return 'AMBER';
+    if(ops.withCp===0 && ops.total===0) return 'NA';
+    return 'GREEN';
+  }
+
+  function computeResponsePerformance(){
+    const logs = Object.keys(panicLogCache).map(function(k){ return panicLogCache[k]; }).filter(function(l){ return isNum(l.responseTimeMs); });
+    const inc = incidentsArr();
+    const incResponded = inc.filter(function(i){ return isNum(i.reportedAt) && isNum(i.respondedAt); });
+    const incResolved = inc.filter(function(i){ return isNum(i.reportedAt) && isNum(i.resolvedAt); });
+    const panicTimes = logs.map(function(l){ return l.responseTimeMs; });
+    const incRespTimes = incResponded.map(function(i){ return i.respondedAt-i.reportedAt; });
+    const incResolTimes = incResolved.map(function(i){ return i.resolvedAt-i.reportedAt; });
+    const allResp = incRespTimes.concat(panicTimes);
+    function avg(arr){ return arr.length? arr.reduce(function(a,b){return a+b;},0)/arr.length : null; }
+    return {
+      avgResponse: avg(allResp), fastest: allResp.length? Math.min.apply(null,allResp): null, slowest: allResp.length? Math.max.apply(null,allResp): null,
+      avgPanicResponse: avg(panicTimes), avgResolution: avg(incResolTimes),
+      critResponded: incResponded.filter(function(i){return i.severity==='CRITICAL';}).length
+    };
+  }
+
+  function computeOfficerPerformance(){
+    return getAllUids().map(function(uid){
+      const d = cpDataFor(uid);
+      const inc = incidentsArr().filter(function(i){ return i.assignedOfficer===officerName(uid); });
+      const panics = Object.keys(panicLogCache).map(function(k){return panicLogCache[k];}).filter(function(l){return l.uid===uid && isNum(l.responseTimeMs);});
+      const recs = (typeof patrolCache !== 'undefined' && patrolCache[uid]) || [];
+      let dist = 0;
+      for(let i=0;i<recs.length-1;i++){
+        const a=recs[i], b=recs[i+1];
+        const la=a.lat||a.latitude, oa=a.lng||a.lon||a.longitude, lb=b.lat||b.latitude, ob=b.lng||b.lon||b.longitude;
+        if(la&&oa&&lb&&ob && typeof haversine==='function') dist += haversine(la,oa,lb,ob);
+      }
+      return {
+        uid: uid, name: officerName(uid), area: officerArea(uid), online: isOnline(uid),
+        compliance: complianceFor(uid), missed: d.missed, total: d.total,
+        incidentResponse: inc.length, panicResponse: panics.length,
+        distanceKm: recs.length>1 ? (dist/1000) : null,
+        anomalyCount: getEventAlerts(0).filter(function(a){return a.uid===uid && ['HIGH_SPEED','LARGE_JUMP','LONG_STOP'].indexOf(a.type)!==-1;}).length
+      };
+    });
+  }
+
+  function computeAreaPerformance(){
+    const areas = {};
+    getAllUids().forEach(function(uid){
+      const area = officerArea(uid);
+      if(!areas[area]) areas[area] = {area:area, officers:[], visited:0, total:0, missed:0, incidents:0, lastPatrol:0};
+      const d = cpDataFor(uid);
+      areas[area].officers.push(uid);
+      areas[area].visited += d.visited; areas[area].total += d.total; areas[area].missed += d.missed;
+      const last = (typeof patrolCache!=='undefined' && patrolCache[uid] && patrolCache[uid][0]) || {};
+      const t = last.time||last.timestamp||0;
+      if(t>areas[area].lastPatrol) areas[area].lastPatrol = t;
+    });
+    incidentsArr().forEach(function(i){
+      const area = i.area || 'UNASSIGNED';
+      if(!areas[area]) areas[area] = {area:area, officers:[], visited:0, total:0, missed:0, incidents:0, lastPatrol:0};
+      areas[area].incidents++;
+    });
+    return Object.keys(areas).map(function(k){
+      const a = areas[k];
+      const risksForArea = risksArr().filter(function(r){ return r.area===a.area; });
+      const critR = risksForArea.some(function(r){return r.riskLevel==='CRITICAL' && r.openStatus!=='MITIGATED';});
+      const highR = risksForArea.some(function(r){return r.riskLevel==='HIGH' && r.openStatus!=='MITIGATED';});
+      return {
+        area: a.area, officerCount: a.officers.length,
+        compliance: a.total>0 ? (a.visited/a.total*100) : null,
+        missed: a.missed, incidents: a.incidents, lastPatrol: a.lastPatrol,
+        riskLevel: critR?'CRITICAL':highR?'HIGH':(risksForArea.length?'MEDIUM':null)
+      };
+    });
+  }
+
+  function computeIncidentTrend(){
+    const inc = incidentsArr().filter(function(i){ return isNum(i.reportedAt); });
+    const now = Date.now();
+    const day = 86400000;
+    const last7 = inc.filter(function(i){ return i.reportedAt >= now-7*day; });
+    const prev7 = inc.filter(function(i){ return i.reportedAt >= now-14*day && i.reportedAt < now-7*day; });
+    const byArea = {}, byCat = {};
+    inc.forEach(function(i){
+      byArea[i.area||'UNASSIGNED'] = (byArea[i.area||'UNASSIGNED']||0)+1;
+      byCat[i.category||'Other'] = (byCat[i.category||'Other']||0)+1;
+    });
+    const topArea = Object.keys(byArea).sort(function(a,b){return byArea[b]-byArea[a];})[0];
+    const topCat = Object.keys(byCat).sort(function(a,b){return byCat[b]-byCat[a];})[0];
+    let trend = N;
+    if(inc.length>0 && (last7.length>0 || prev7.length>0)){
+      if(last7.length > prev7.length) trend = 'DETERIORATING (naik)';
+      else if(last7.length < prev7.length) trend = 'IMPROVING (turun)';
+      else trend = 'STABLE';
+    }
+    return { total: inc.length, last7: last7.length, prev7: prev7.length, topArea: topArea||N, topCat: topCat||N, trend: trend, byArea: byArea, byCat: byCat };
+  }
+
+  /* ---------------- FINDING LIFECYCLE KPI (Task: KPI, data nyata saja) ---------------- */
+  function computeFindingKpis(){
+    const inc = incidentsArr();
+    const findings = inc.filter(function(i){ return FINDING_STATUSES.indexOf(i.status)!==-1; });
+    function avg(arr){ return arr.length? arr.reduce(function(a,b){return a+b;},0)/arr.length : null; }
+    const ackTimes = findings.filter(function(i){return isNum(i.reportedAt)&&isNum(i.acknowledgedAt);}).map(function(i){return i.acknowledgedAt-i.reportedAt;});
+    const respTimes = findings.filter(function(i){return isNum(i.reportedAt)&&isNum(i.assignedAt);}).map(function(i){return i.assignedAt-i.reportedAt;});
+    const repairTimes = findings.filter(function(i){return isNum(i.repairStartedAt)&&isNum(i.repairCompletedAt);}).map(function(i){return i.repairCompletedAt-i.repairStartedAt;});
+    const closureTimes = findings.filter(function(i){return isNum(i.reportedAt)&&isNum(i.closedAt);}).map(function(i){return i.closedAt-i.reportedAt;});
+    const now = Date.now();
+    const overdue = findings.filter(function(i){ return i.targetDate && i.status!=='CLOSED' && new Date(i.targetDate).getTime() < now; }).length;
+    const reopened = findings.filter(function(i){ return i.status==='REOPENED'; }).length;
+    return {
+      openFindings: findings.filter(function(i){return isOpenFindingStatus(i.status);}).length,
+      avgAcknowledgeTime: avg(ackTimes), avgResponseTime: avg(respTimes),
+      avgRepairTime: avg(repairTimes), avgClosureTime: avg(closureTimes),
+      overdueFindings: overdue, reopenedFindings: reopened
+    };
+  }
+
+  /* ---------------- ALERT PRIORITY LIST (dipakai di Alert Center & Exec) ---------------- */
+  function buildPriorityAlerts(){
+    const list = [];
+    getActivePanicList().forEach(function(a){
+      list.push({level:'CRITICAL', icon:'🔴', title:'PANIC ACTIVE — '+(a.name||a.uid), meta:'Sejak '+fmtDate(a.time)+' • Lokasi: '+(a.location||N)});
+    });
+    incidentsArr().filter(function(i){ return i.severity==='CRITICAL' && isOpenFindingStatus(i.status); }).forEach(function(i){
+      list.push({level:'CRITICAL', icon:'🔴', title:'CRITICAL INCIDENT — '+(i.category||'Incident'), meta:(i.area||N)+' • Status: '+i.status});
+    });
+    risksArr().filter(function(r){ return r.riskLevel==='CRITICAL' && r.openStatus!=='MITIGATED'; }).forEach(function(r){
+      list.push({level:'CRITICAL', icon:'🔴', title:'CRITICAL RISK — '+(r.category||'Risk'), meta:(r.area||N)+' • '+(r.openStatus||'OPEN')});
+    });
+    getEventAlerts(Date.now()-3600000).filter(function(a){return a.type==='GEOFENCE_ENTER';}).forEach(function(a){
+      list.push({level:'HIGH', icon:'🟠', title:'GEOFENCE VIOLATION — '+officerName(a.uid), meta:(a.details&&a.details.name||N)+' • '+fmtDate(a.time)});
+    });
+    getEventAlerts(Date.now()-3600000).filter(function(a){return a.type==='CHECKPOINT_MISSED';}).forEach(function(a){
+      list.push({level:'HIGH', icon:'🟠', title:'CHECKPOINT MISSED — '+(a.details&&a.details.officerName||officerName(a.uid)), meta:(a.details&&a.details.checkpointName||N)+' • '+fmtDate(a.time)});
+    });
+    getAllUids().filter(function(u){ return !isOnline(u); }).forEach(function(u){
+      const d = cpDataFor(u);
+      if(d.total>0) list.push({level:'MEDIUM', icon:'🟡', title:'OFFICER OFFLINE — '+officerName(u), meta:'Area: '+officerArea(u)});
+    });
+    getEventAlerts(Date.now()-3600000).filter(function(a){return ['HIGH_SPEED','LARGE_JUMP','LONG_STOP'].indexOf(a.type)!==-1;}).forEach(function(a){
+      list.push({level:'MEDIUM', icon:'🟡', title:'ANOMALY: '+a.type+' — '+officerName(a.uid), meta:fmtDate(a.time)});
+    });
+    risksArr().filter(function(r){ return r.riskLevel==='HIGH' && r.openStatus!=='MITIGATED'; }).forEach(function(r){
+      list.push({level:'HIGH', icon:'🟠', title:'HIGH RISK — '+(r.category||'Risk'), meta:(r.area||N)});
+    });
+    incidentsArr().filter(function(i){ return isOpenFindingStatus(i.status) && i.status!=='REOPENED' && i.severity!=='CRITICAL'; }).forEach(function(i){
+      list.push({level:'LOW', icon:'🟢', title:'OPEN INCIDENT — '+(i.category||'Incident'), meta:(i.area||N)+' • '+i.status});
+    });
+    const order = {CRITICAL:0,HIGH:1,MEDIUM:2,LOW:3};
+    list.sort(function(a,b){ return order[a.level]-order[b.level]; });
+    return list;
+  }
+
+  /* ================================================================ */
+  /* RENDER: EXECUTIVE DASHBOARD                                      */
+  /* ================================================================ */
+  function renderExec(){
+    const ops = computeOperationalStatus();
+    const score = computeSecurityScore();
+    const status = computeSecurityStatus();
+    const alerts = buildPriorityAlerts();
+    const trend = computeIncidentTrend();
+    const statusLabel = {GREEN:'SECURITY STATUS: GREEN — NORMAL', AMBER:'SECURITY STATUS: AMBER — PERLU PERHATIAN', RED:'SECURITY STATUS: RED — KRITIKAL', NA:'SECURITY STATUS: BELUM ADA DATA'}[status];
+    let html = '';
+    html += '<div class="exec-status-banner status-'+status+'"><div class="exec-status-dot"></div><div><div class="exec-status-text">'+statusLabel+'</div>';
+    html += '<div class="exec-status-sub">Overall Security Score: '+(isNum(score)?score+'/100':N)+' • Trend Incident: '+esc(trend.trend)+'</div></div></div>';
+
+    html += '<div class="mgmt-section-title">OPERATIONAL STATUS</div><div class="kpi-grid">';
+    function kpi(label,val,cls,sub){ return '<div class="kpi-card'+(cls?' '+cls:'')+'"><div class="kpi-label">'+label+'</div><div class="kpi-value">'+val+'</div>'+(sub?'<div class="kpi-sub">'+sub+'</div>':'')+'</div>'; }
+    html += kpi('Total Petugas', ops.total||N);
+    html += kpi('Online', ops.online, ops.total? (ops.online>0?'kpi-good':'kpi-bad'):'');
+    html += kpi('Offline', ops.offline, ops.offline>0?'kpi-warn':'');
+    html += kpi('Currently Patrolling', ops.currentlyPatrolling);
+    html += kpi('Patrol Completed', ops.completedPatrol);
+    html += kpi('Patrol Incomplete', ops.incompletePatrol, ops.incompletePatrol>0?'kpi-warn':'kpi-good');
+    html += kpi('Checkpoint Compliance', pctStr(ops.checkpointCompliance), isNum(ops.checkpointCompliance)?(ops.checkpointCompliance>=90?'kpi-good':ops.checkpointCompliance>=70?'kpi-warn':'kpi-bad'):'');
+    html += kpi('Missed Checkpoint', ops.withCp? ops.missedCheckpoint : N, ops.missedCheckpoint>0?'kpi-bad':'kpi-good');
+    html += kpi('Active Panic', ops.activePanic, ops.activePanic>0?'kpi-bad':'kpi-good');
+    html += kpi('Active Anomaly', ops.activeAnomaly, ops.activeAnomaly>0?'kpi-warn':'kpi-good');
+    html += kpi('Active Geofence Violation', ops.activeGeofenceViol, ops.activeGeofenceViol>0?'kpi-warn':'kpi-good');
+    html += kpi('Open Incident', ops.openIncident, ops.openIncident>0?'kpi-warn':'kpi-good');
+    html += kpi('Critical Incident', ops.criticalIncident, ops.criticalIncident>0?'kpi-bad':'kpi-good');
+    html += '</div>';
+
+    html += '<div class="mgmt-section-title">TOP 5 ISSUES (Priority)</div>';
+    if(alerts.length===0){ html += '<div class="na">Tidak ada issue aktif saat ini.</div>'; }
+    else { html += '<ul class="mini-list">' + alerts.slice(0,5).map(function(a){ return '<li>'+a.icon+' <b>'+esc(a.title)+'</b> — '+esc(a.meta)+'</li>'; }).join('') + '</ul>'; }
+
+    const areaPerf = computeAreaPerformance().filter(function(a){return a.total>0 || a.incidents>0;}).sort(function(a,b){
+      const ca = isNum(a.compliance)?a.compliance:999, cb = isNum(b.compliance)?b.compliance:999;
+      return (ca - (a.incidents*5)) - (cb - (b.incidents*5));
+    });
+    html += '<div class="mgmt-section-title">TOP RISK AREAS</div>';
+    if(areaPerf.length===0){ html += '<div class="na">Belum ada data area.</div>'; }
+    else { html += '<ul class="mini-list">' + areaPerf.slice(0,5).map(function(a){ return '<li>📍 <b>'+esc(a.area)+'</b> — Compliance: '+pctStr(a.compliance)+' • Incident: '+a.incidents+' • Missed CP: '+a.missed+'</li>'; }).join('') + '</ul>'; }
+
+    html += '<div class="mgmt-section-title">INCIDENT TREND</div>';
+    html += '<div class="kpi-grid">';
+    html += kpi('7 Hari Terakhir', trend.last7);
+    html += kpi('7 Hari Sebelumnya', trend.prev7);
+    html += kpi('Total Incident', trend.total);
+    html += kpi('Top Problem Area', trend.topArea);
+    html += kpi('Top Category', trend.topCat);
+    html += kpi('Trend', trend.trend);
+    html += '</div>';
+
+    document.getElementById('mpanel-exec').innerHTML = html;
+  }
+
+  /* ================================================================ */
+  /* RENDER: PATROL COMPLIANCE                                        */
+  /* ================================================================ */
+  function renderCompliance(){
+    const comp = computeGlobalCompliance();
+    const perf = computeOfficerPerformance().filter(function(p){return p.total>0;});
+    const best = perf.length? perf.slice().sort(function(a,b){return b.compliance-a.compliance;})[0] : null;
+    const worst = perf.length? perf.slice().sort(function(a,b){return a.compliance-b.compliance;})[0] : null;
+    const areaPerf = computeAreaPerformance().filter(function(a){return a.total>0;});
+    const worstArea = areaPerf.length? areaPerf.slice().sort(function(a,b){return (a.compliance||0)-(b.compliance||0);})[0] : null;
+
+    let html = '<div class="mgmt-section-title">PATROL COMPLIANCE OVERVIEW</div>';
+    html += '<div style="font-size:11px;color:var(--muted);margin-bottom:10px">Formula: Checkpoint Compliance = Visited Checkpoints ÷ Total Required Checkpoints × 100. Dihitung per petugas dari data checkpoint GPS Firebase.</div>';
+    html += '<div class="kpi-grid">';
+    function kpi(label,val,cls,sub){ return '<div class="kpi-card'+(cls?' '+cls:'')+'"><div class="kpi-label">'+label+'</div><div class="kpi-value">'+val+'</div>'+(sub?'<div class="kpi-sub">'+sub+'</div>':'')+'</div>'; }
+    html += kpi('Total Petugas dgn Checkpoint', comp.withCp);
+    html += kpi('Total Checkpoint', comp.totalCp||N);
+    html += kpi('Visited', comp.visitedCp||N, 'kpi-good');
+    html += kpi('Missed', comp.missedCp||N, comp.missedCp>0?'kpi-bad':'');
+    html += kpi('Compliance %', pctStr(comp.pct), isNum(comp.pct)?(comp.pct>=90?'kpi-good':comp.pct>=70?'kpi-warn':'kpi-bad'):'');
+    html += kpi('Compliance Tertinggi', best? esc(best.name)+' ('+pctStr(best.compliance)+')' : N);
+    html += kpi('Compliance Terendah', worst? esc(worst.name)+' ('+pctStr(worst.compliance)+')' : N);
+    html += kpi('Area Compliance Terendah', worstArea? esc(worstArea.area)+' ('+pctStr(worstArea.compliance)+')' : N);
+    html += '</div>';
+
+    html += '<div class="mgmt-section-title">DETAIL PER PETUGAS</div>';
+    if(perf.length===0){ html += '<div class="na">Belum ada data checkpoint untuk petugas manapun.</div>'; }
+    else {
+      html += '<table class="mgmt-table"><thead><tr><th>Petugas</th><th>Area</th><th>Total CP</th><th>Visited</th><th>Missed</th><th>Compliance</th></tr></thead><tbody>';
+      perf.sort(function(a,b){return b.compliance-a.compliance;}).forEach(function(p){
+        html += '<tr><td>'+esc(p.name)+'</td><td>'+esc(p.area)+'</td><td>'+p.total+'</td><td>'+(p.total-p.missed)+'</td><td>'+p.missed+'</td><td>'+pctStr(p.compliance)+'</td></tr>';
+      });
+      html += '</tbody></table>';
+    }
+    document.getElementById('mpanel-compliance').innerHTML = html;
+  }
+
+  /* ================================================================ */
+  /* RENDER: INCIDENT MANAGEMENT                                      */
+  /* ================================================================ */
+  function incidentFormHtml(){
+    return '<div class="mgmt-section-title">LAPORKAN FINDING / TEMUAN BARU</div>' +
+    '<div class="mgmt-help"><b>Alur:</b> Temukan → Simpan → Acknowledge → Assign → In Progress → Repair Completed → Verify → Close.<br><b>Isi wajib:</b> Area, Kategori, Deskripsi. Field lain boleh dilengkapi bertahap saat penanganan.</div>' +
+    '<div class="mgmt-form" id="incidentForm">' +
+      '<div><label>Lokasi / Titik Temuan</label><input id="inLocation" placeholder="Contoh: PJU Jalur Barat / Gate 3"/></div>' +
+      '<div><label>Area</label><select id="inArea"><option value="">Pilih Area</option><option value="'+CUSTOM_AREA_VAL+'">Custom Area</option></select></div>' +
+      '<div id="inAreaCustomWrap" style="display:none"><label>Nama Area Custom</label><input id="inAreaCustom" placeholder="Contoh: PJU Jalur Barat"/></div>' +
+      '<div><label>Kategori</label><select id="inCategory">' + INCIDENT_CATEGORIES.map(function(c){return '<option>'+c+'</option>';}).join('') + '</select></div>' +
+      '<div><label>Severity / Tingkat Dampak</label><select id="inSeverity"><option>LOW</option><option>MEDIUM</option><option>HIGH</option><option>CRITICAL</option></select><div class="mgmt-note">Seberapa serius dampak temuan terhadap security/operasi.</div></div>' +
+      '<div><label>Reporter / Penemu</label><input id="inReporter" placeholder="Nama petugas yang menemukan"/></div>' +
+      '<div><label>Assigned To / Action Owner <span class="mgmt-note">(opsional saat awal)</span></label><input id="inAssigned" placeholder="Diisi saat sudah ditugaskan"/></div>' +
+      '<div><label>Target Date / Batas Penyelesaian</label><input id="inTargetDate" type="date"/></div>' +
+      '<div><label>Root Cause / Penyebab</label><input id="inRootCause" placeholder="Diisi setelah penyebab diketahui"/></div>' +
+      '<div><label>Corrective Action / Tindakan</label><input id="inCorrective" placeholder="Rencana/tindakan perbaikan"/></div>' +
+      '<div><label>Evidence / Bukti</label><input id="inEvidence" placeholder="Keterangan atau link bukti (opsional)"/></div>' +
+      '<div style="grid-column:1/-1"><label>Deskripsi Temuan</label><textarea id="inDesc" placeholder="Contoh: Lampu PJU mati di Jalur Barat pada jam 10:00..."></textarea></div>' +
+      '<div style="grid-column:1/-1">' +
+        '<label>Photo Evidence</label>' +
+        '<div class="photo-actions">' +
+          '<label class="btn" for="inPhotoCamera">📷 Camera</label>' +
+          '<input type="file" id="inPhotoCamera" accept="image/*" capture="environment" style="display:none" multiple/>' +
+          '<label class="btn" for="inPhotoGallery">🖼️ Gallery</label>' +
+          '<input type="file" id="inPhotoGallery" accept="image/*" style="display:none" multiple/>' +
+        '</div>' +
+        '<div id="inPhotoPreview" class="photo-preview"></div>' +
+      '</div>' +
+      '<div class="form-actions"><button class="btn primary" id="btnAddIncident">+ Simpan Incident</button></div>' +
+      '<div id="incidentSaveStatus" class="save-status"></div>' +
+    '</div>';
+  }
+  function renderIncidents(){
+    /* 1. capture draft + focus SEBELUM re-render (jaga form state) */
+    captureFormDraft(INCIDENT_DRAFT_FIELDS, incidentDraft);
+    const activeInfo = captureActiveElementInfo();
+
+    const inc = incidentsArr().sort(function(a,b){return (b.reportedAt||0)-(a.reportedAt||0);});
+    const trend = computeIncidentTrend();
+    const resp = computeResponsePerformance();
+    const fk = computeFindingKpis();
+    let html = incidentFormHtml();
+
+    html += '<div class="mgmt-section-title">RESPONSE PERFORMANCE</div><div class="kpi-grid">';
+    function kpi(label,val){ return '<div class="kpi-card"><div class="kpi-label">'+label+'</div><div class="kpi-value">'+val+'</div></div>'; }
+    html += kpi('Avg Response Time', fmtDur(resp.avgResponse));
+    html += kpi('Fastest Response', fmtDur(resp.fastest));
+    html += kpi('Slowest Response', fmtDur(resp.slowest));
+    html += kpi('Avg Panic Response', fmtDur(resp.avgPanicResponse));
+    html += kpi('Avg Resolution Time', fmtDur(resp.avgResolution));
+    html += kpi('Critical Incident Responded', resp.critResponded||0);
+    html += '</div>';
+
+    html += '<div class="mgmt-section-title">FINDING LIFECYCLE KPI</div><div class="kpi-grid">';
+    html += kpi('Open Findings', fk.openFindings);
+    html += kpi('Avg Acknowledge Time', fmtDur(fk.avgAcknowledgeTime));
+    html += kpi('Avg Response Time (Assign)', fmtDur(fk.avgResponseTime));
+    html += kpi('Avg Repair Time', fmtDur(fk.avgRepairTime));
+    html += kpi('Avg Closure Time', fmtDur(fk.avgClosureTime));
+    html += kpi('Overdue Findings', fk.overdueFindings);
+    html += kpi('Reopened Findings', fk.reopenedFindings);
+    html += '</div>';
+
+    html += '<div class="mgmt-section-title">FINDING REGISTRY</div>';
+    html += '<div class="finding-filters">' +
+      ['ALL','OPEN','CLOSED','REOPENED'].map(function(f){return '<button type="button" class="finding-filter '+(findingFilter===f?'active':'')+'" data-finding-filter="'+f+'">'+(f==='ALL'?'ALL':f==='CLOSED'?'CLOSED / HISTORY':f)+'</button>';}).join('') +
+      '</div>';
+    const visibleInc = inc.filter(function(i){
+      if(findingFilter==='CLOSED') return i.status==='CLOSED' || i.status==='RESOLVED';
+      if(findingFilter==='REOPENED') return i.status==='REOPENED';
+      if(findingFilter==='OPEN') return isOpenFindingStatus(i.status) && i.status!=='REOPENED';
+      return true;
+    });
+    html += '<div class="mgmt-note">Temuan tersimpan di ALL. Gunakan OPEN/REOPENED untuk pekerjaan aktif dan CLOSED / HISTORY untuk arsip. Setiap finding memiliki tombol 🗑 Hapus dengan konfirmasi; penghapusan bersifat permanen.</div>';
+    html += '<div class="mgmt-section-title">FINDING LIST ('+visibleInc.length+')</div>';
+    if(visibleInc.length===0){ html += '<div class="na">Belum ada incident tercatat.</div>'; }
+    else {
+      html += '<div class="mgmt-table-wrap"><table class="mgmt-table"><thead><tr><th>Tanggal</th><th>Area</th><th>Kategori</th><th>Severity</th><th>Status</th><th>Assigned</th><th>Resp/Resol</th><th>Aksi</th></tr></thead><tbody>';
+      visibleInc.forEach(function(i){
+        html += '<tr><td>'+fmtDate(i.reportedAt)+'</td><td>'+esc(i.area)+'</td><td>'+esc(i.category)+'</td><td>'+badgeSeverity(i.severity)+'</td><td>'+badgeStatus(i.status)+'</td><td>'+esc(i.assignedOfficer||N)+'</td>' +
+          '<td>'+fmtDur(isNum(i.respondedAt)?i.respondedAt-i.reportedAt:null)+' / '+fmtDur(isNum(i.resolvedAt)?i.resolvedAt-i.reportedAt:null)+'</td>' +
+          '<td>' +
+            '<button class="btn" data-act="detail" data-key="'+i._key+'" style="font-size:10px;padding:4px 6px">Detail</button> ' +
+            '<button class="btn danger-btn" data-act="delete-finding" data-key="'+i._key+'" style="font-size:10px;padding:4px 6px">🗑 Hapus</button> ' +
+            (FINDING_NEXT[i.status] ? FINDING_NEXT[i.status].map(function(ns){ return '<button class="btn" data-act="advance" data-key="'+i._key+'" data-next="'+ns+'" style="font-size:10px;padding:4px 6px">'+ (ns==='REOPENED'?'Reopen':'→ '+ns) +'</button> '; }).join('') : '') +
+            (!i.status && !i.respondedAt? '<button class="btn" data-act="respond" data-key="'+i._key+'" style="font-size:10px;padding:4px 6px">Mark Responded</button> ':'') +
+            (!i.status && !i.resolvedAt? '<button class="btn" data-act="resolve" data-key="'+i._key+'" style="font-size:10px;padding:4px 6px">Mark Resolved</button>':'') +
+          '</td></tr>';
+      });
+      html += '</tbody></table></div>';
+    }
+    document.getElementById('mpanel-incidents').innerHTML = html;
+
+    /* 2/3/4/5/6/7/8. restore draft, restore custom-area visibility, restore focus */
+    restoreFormDraft(INCIDENT_DRAFT_FIELDS, incidentDraft, 'inArea', 'inAreaCustomWrap');
+    attachDraftAutoCapture(INCIDENT_DRAFT_FIELDS, incidentDraft);
+    restoreFocus(activeInfo, INCIDENT_DRAFT_FIELDS);
+
+    const inAreaSel = document.getElementById('inArea');
+    if(inAreaSel){
+      inAreaSel.addEventListener('change', function(){
+        document.getElementById('inAreaCustomWrap').style.display = (inAreaSel.value===CUSTOM_AREA_VAL) ? 'block' : 'none';
+      });
+    }
+
+    const btnAdd = document.getElementById('btnAddIncident');
+    if(btnAdd) btnAdd.addEventListener('click', function(){
+      const areaSel = document.getElementById('inArea').value;
+      const area = (areaSel===CUSTOM_AREA_VAL) ? document.getElementById('inAreaCustom').value.trim() : areaSel;
+      const now = Date.now();
+      const rec = {
+        location: document.getElementById('inLocation').value.trim(),
+        area: area,
+        category: document.getElementById('inCategory').value,
+        severity: document.getElementById('inSeverity').value,
+        reporter: document.getElementById('inReporter').value.trim(),
+        assignedOfficer: document.getElementById('inAssigned').value.trim(),
+        targetDate: document.getElementById('inTargetDate').value || null,
+        status: 'NEW',
+        rootCause: document.getElementById('inRootCause').value.trim(),
+        correctiveAction: document.getElementById('inCorrective').value.trim(),
+        evidence: document.getElementById('inEvidence').value.trim(),
+        description: document.getElementById('inDesc').value.trim(),
+        reportedAt: now
+      };
+      if(!rec.area || !rec.category || !rec.description){ alert('Area, Kategori, dan Deskripsi wajib diisi'); return; }
+      btnAdd.disabled = true;
+      const newRef = db.ref(DB_INCIDENTS).push();
+      const timelineRef = newRef.child('timeline').push();
+      const timelineEvent = {status:'NEW', timestamp:now, actor:rec.reporter||'System', note:'Finding reported', evidence:rec.evidence||''};
+      const updates = {};
+      updates[newRef.key] = rec;
+      updates[newRef.key + '/timeline/' + timelineRef.key] = timelineEvent;
+      Promise.resolve(firebase.auth().currentUser || firebase.auth().signInAnonymously())
+        .then(function(){ return db.ref(DB_INCIDENTS).update(updates); })
+        .then(function(){
+          incidentDraft = {};
+          showAlert('Incident tersimpan ke Firebase');
+          renderCurrentTab();
+        })
+        .catch(function(err){
+          console.error('Incident save failed:', err);
+          alert('GAGAL MENYIMPAN INCIDENT KE FIREBASE.\n\n' + (err && err.message ? err.message : err) + '\n\nData form TIDAK dihapus. Periksa koneksi/Firebase Rules lalu coba lagi.');
+        })
+        .finally(function(){ btnAdd.disabled = false; });
+    });
+    document.querySelectorAll('[data-act="respond"]').forEach(function(b){ b.addEventListener('click', function(){ db.ref(DB_INCIDENTS).child(b.getAttribute('data-key')).update({respondedAt:Date.now()}); }); });
+    document.querySelectorAll('[data-act="resolve"]').forEach(function(b){ b.addEventListener('click', function(){ db.ref(DB_INCIDENTS).child(b.getAttribute('data-key')).update({resolvedAt:Date.now(), status:'RESOLVED'}); }); });
+    document.querySelectorAll('[data-act="detail"]').forEach(function(b){ b.addEventListener('click', function(){ openFindingDetail(b.getAttribute('data-key')); }); });
+    document.querySelectorAll('[data-finding-filter]').forEach(function(b){ b.addEventListener('click', function(){ findingFilter=b.getAttribute('data-finding-filter'); renderIncidents(); }); });
+    document.querySelectorAll('[data-act="delete-finding"]').forEach(function(b){ b.addEventListener('click', function(){
+      const key=b.getAttribute('data-key');
+      const merged=incidentsArr().find(function(x){return x._key===key;});
+      if(!merged){ alert('Data finding tidak ditemukan.'); return; }
+      const status=merged.status||'NEW';
+      const ok=confirm('HAPUS FINDING '+key+'?\\n\\nStatus saat ini: '+status+'\\n\\nData finding beserta timeline/evidence yang tersimpan di record akan dihapus permanen. Tindakan ini tidak dapat dibatalkan.\\n\\nTekan OK untuk menghapus.');
+      if(!ok) return;
+      b.disabled=true;
+      function removeLocal(){
+        try{
+          const loc=JSON.parse(localStorage.getItem('__mgmt_incidents__')||'{}');
+          if(loc[key]){ delete loc[key]; localStorage.setItem('__mgmt_incidents__',JSON.stringify(loc)); }
+        }catch(e){}
+      }
+      removeLocal();
+      if(String(key).indexOf('local_')===0){
+        delete incidentsCache[key];
+        showAlert && showAlert('🗑 Finding '+key+' berhasil dihapus dari perangkat');
+        renderIncidents();
+        return;
+      }
+      try{
+        db.ref(DB_INCIDENTS).child(key).remove().then(function(){
+          delete incidentsCache[key];
+          showAlert && showAlert('🗑 Finding '+key+' berhasil dihapus permanen');
+          renderIncidents();
+        }).catch(function(err){
+          b.disabled=false;
+          alert('Gagal menghapus finding dari Firebase: '+(err&&err.message?err.message:err)+'\\n\\nData lokal sudah dibersihkan. Periksa koneksi/rules Firebase lalu coba lagi bila record masih tampil.');
+          renderIncidents();
+        });
+      }catch(err){
+        b.disabled=false;
+        alert('Firebase belum siap: '+(err&&err.message?err.message:err));
+      }
+    }); });
+    document.querySelectorAll('[data-act="advance"]').forEach(function(b){ b.addEventListener('click', function(){ advanceFinding(b.getAttribute('data-key'), b.getAttribute('data-next')); }); });
+  }
+
+  /* ---------------- FINDING LIFECYCLE ACTIONS (Task 3 + Audit Timeline) ---------------- */
+  function advanceFinding(key, nextStatus){
+    const actor = prompt('Nama actor (petugas yang melakukan aksi "'+nextStatus+'"):','') || 'N/A';
+    const note = prompt('Catatan (opsional):','') || '';
+    const evidence = prompt('Evidence URL/keterangan (opsional):','') || '';
+    const now = Date.now();
+    const update = { status: nextStatus };
+    const tsField = FINDING_TS_FIELD[nextStatus]; if(tsField) update[tsField] = now;
+    const byField = FINDING_BY_FIELD[nextStatus]; if(byField) update[byField] = actor;
+    const noteField = FINDING_NOTE_FIELD[nextStatus]; if(noteField) update[noteField] = note;
+    const evidField = FINDING_EVID_FIELD[nextStatus]; if(evidField) update[evidField] = evidence;
+    db.ref(DB_INCIDENTS).child(key).update(update);
+    db.ref(DB_INCIDENTS).child(key).child('timeline').push({status:nextStatus, timestamp:now, actor:actor, note:note, evidence:evidence});
+    showAlert && showAlert('Status finding diperbarui: ' + nextStatus);
+  }
+  function openFindingDetail(key){
+    const i = incidentsCache[key];
+    if(!i){ return; }
+    const modal = document.getElementById('findingDetailModal');
+    let html = '<div class="mgmt-section-title">FINDING DETAIL</div>';
+    html += '<div class="mgmt-form" style="grid-template-columns:1fr 1fr">';
+    function row(l,v){ return '<div><label>'+l+'</label><div style="color:#cfe6ff;font-size:12px;padding:4px 0">'+esc(v===undefined||v===null||v===''?N:v)+'</div></div>'; }
+    html += row('Finding ID', key);
+    html += row('Area', i.area);
+    html += row('Location', i.location);
+    html += row('Category', i.category);
+    html += row('Severity', i.severity);
+    html += row('Reporter', i.reporter);
+    html += row('Assigned To / Action Owner', i.assignedOfficer);
+    html += row('Status', i.status);
+    html += '</div>';
+    html += '<div style="margin:8px 0;color:#cfe6ff;font-size:12px">'+esc(i.description||N)+'</div>' + '<div class="mgmt-help"><b>Catatan:</b> Finding tidak otomatis CLOSED setelah perbaikan. Security harus melakukan VERIFY lalu CLOSE.</div>';
+    html += '<div class="mgmt-section-title">PROGRESS TIMELINE</div>';
+    db.ref(DB_INCIDENTS).child(key).child('timeline').once('value').then(function(snap){
+      const tl = snap.val() || {};
+      const rows = Object.keys(tl).map(function(k){ return tl[k]; }).sort(function(a,b){ return (a.timestamp||0)-(b.timestamp||0); });
+      let thtml = '';
+      if(rows.length===0){ thtml = '<div class="na">Belum ada timeline tercatat.</div>'; }
+      else {
+        thtml = '<table class="mgmt-table"><thead><tr><th>Waktu</th><th>Status</th><th>Actor</th><th>Note</th><th>Evidence</th></tr></thead><tbody>';
+        rows.forEach(function(r){
+          thtml += '<tr><td>'+fmtDate(r.timestamp)+'</td><td>'+badgeStatus(r.status)+'</td><td>'+esc(r.actor||N)+'</td><td>'+esc(r.note||N)+'</td><td>'+esc(r.evidence||N)+'</td></tr>';
+        });
+        thtml += '</tbody></table>';
+      }
+      document.getElementById('findingTimelineBody').innerHTML = thtml;
+    });
+    document.getElementById('findingDetailBody').innerHTML = html;
+    modal.style.display = 'flex';
+  }
+
+  /* ================================================================ */
+  /* RENDER: SECURITY RISK                                            */
+  /* ================================================================ */
+  function riskFormHtml(){
+    return '<div class="mgmt-section-title">TAMBAH SECURITY RISK</div>' +
+    '<div class="mgmt-help"><b>Tujuan:</b> catat potensi risiko yang perlu dipantau atau dimitigasi.<br><b>Frequency:</b> seberapa sering risiko terjadi. <b>Trend:</b> arah risikonya. <b>Mitigation Status:</b> kondisi penanganannya.</div>' +
+    '<div class="mgmt-form" id="riskForm">' +
+      '<div><label>Kategori Risiko</label><select id="rkCategory">' + RISK_CATEGORIES.map(function(c){return '<option>'+c+'</option>';}).join('') + '</select></div>' +
+      '<div><label>Area</label><select id="rkArea"><option value="">Pilih Area</option><option value="'+CUSTOM_AREA_VAL+'">Custom Area</option></select></div>' +
+      '<div id="rkAreaCustomWrap" style="display:none"><label>Nama Area Custom</label><input id="rkAreaCustom" placeholder="Ketik nama area..."/></div>' +
+      '<div><label>Risk Level / Tingkat Risiko</label><select id="rkLevel"><option>LOW</option><option>MEDIUM</option><option>HIGH</option><option>CRITICAL</option></select></div>' +
+      '<div><label>Frequency / Frekuensi</label><input id="rkFreq" placeholder="Contoh: 2x/bulan"/></div>' +
+      '<div><label>Trend / Arah Risiko</label><select id="rkTrend"><option>Increasing</option><option>Stable</option><option>Decreasing</option></select></div>' +
+      '<div><label>Mitigation Status / Status Penanganan</label><select id="rkStatus"><option value="OPEN">OPEN</option><option value="MITIGATING">MITIGATING</option><option value="MITIGATED">MITIGATED</option></select></div>' +
+      '<div style="grid-column:1/-1"><label>Catatan / Detail Risiko</label><textarea id="rkNotes" placeholder="Jelaskan kondisi, potensi dampak, dan tindakan yang diperlukan..."></textarea></div>' +
+      '<div class="form-actions"><button class="btn primary" id="btnAddRisk">+ Simpan Risk</button></div>' +
+      '<div id="riskSaveStatus" class="save-status"></div>' +
+    '</div>';
+  }
+  function renderRisk(){
+    /* 1. capture draft + focus SEBELUM re-render (jaga form state) */
+    captureFormDraft(RISK_DRAFT_FIELDS, riskDraft);
+    const activeInfo = captureActiveElementInfo();
+
+    const risks = risksArr().sort(function(a,b){return (b.createdAt||0)-(a.createdAt||0);});
+    const open = openRisks();
+    let html = riskFormHtml();
+    html += '<div class="mgmt-section-title">SECURITY RISK OVERVIEW</div><div class="kpi-grid">';
+    function kpi(label,val,cls){ return '<div class="kpi-card'+(cls?' '+cls:'')+'"><div class="kpi-label">'+label+'</div><div class="kpi-value">'+val+'</div></div>'; }
+    html += kpi('Total Risk Tercatat', risks.length);
+    html += kpi('Open Risk', open.length, open.length>0?'kpi-warn':'kpi-good');
+    html += kpi('Critical Risk', risks.filter(function(r){return r.riskLevel==='CRITICAL' && r.openStatus!=='MITIGATED';}).length, 'kpi-bad');
+    html += kpi('High Risk', risks.filter(function(r){return r.riskLevel==='HIGH' && r.openStatus!=='MITIGATED';}).length, 'kpi-warn');
+    html += '</div>';
+    html += '<div class="mgmt-section-title">RISK REGISTER</div>';
+    html += '<div class="mgmt-note">Semua risk dapat dilihat kembali di register. Gunakan 🗑 Hapus bila record memang sudah tidak diperlukan; sistem akan meminta konfirmasi sebelum menghapus.</div>';
+    if(risks.length===0){ html += '<div class="na">Belum ada data risk. Gunakan form di atas untuk menambahkan.</div>'; }
+    else {
+      html += '<div class="mgmt-table-wrap"><table class="mgmt-table"><thead><tr><th>Kategori</th><th>Area</th><th>Level</th><th>Frequency</th><th>Trend</th><th>Status</th><th>Aksi</th></tr></thead><tbody>';
+      risks.forEach(function(r){
+        html += '<tr><td>'+esc(r.category)+'</td><td>'+esc(r.area||N)+'</td><td>'+badgeSeverity(r.riskLevel)+'</td><td>'+esc(r.frequency||N)+'</td><td>'+esc(r.trend||N)+'</td><td>'+badgeStatus(r.openStatus)+'</td><td><button class="btn danger-btn" data-act="delete-risk" data-key="'+r._key+'" style="font-size:10px;padding:4px 6px">🗑 Hapus</button></td></tr>';
+      });
+      html += '</tbody></table></div>';
+    }
+    document.getElementById('mpanel-risk').innerHTML = html;
+
+    /* 2/3/4/5/6/7/8. restore draft, restore custom-area visibility, restore focus */
+    restoreFormDraft(RISK_DRAFT_FIELDS, riskDraft, 'rkArea', 'rkAreaCustomWrap');
+    attachDraftAutoCapture(RISK_DRAFT_FIELDS, riskDraft);
+    restoreFocus(activeInfo, RISK_DRAFT_FIELDS);
+
+    const rkAreaSel = document.getElementById('rkArea');
+    if(rkAreaSel){
+      rkAreaSel.addEventListener('change', function(){
+        document.getElementById('rkAreaCustomWrap').style.display = (rkAreaSel.value===CUSTOM_AREA_VAL) ? 'block' : 'none';
+      });
+    }
+    const btnAdd = document.getElementById('btnAddRisk');
+    if(btnAdd) btnAdd.addEventListener('click', function(){
+      const rkAreaVal = document.getElementById('rkArea').value;
+      const rec = {
+        category: document.getElementById('rkCategory').value,
+        area: (rkAreaVal===CUSTOM_AREA_VAL) ? document.getElementById('rkAreaCustom').value.trim() : rkAreaVal,
+        riskLevel: document.getElementById('rkLevel').value,
+        frequency: document.getElementById('rkFreq').value.trim(),
+        trend: document.getElementById('rkTrend').value,
+        openStatus: document.getElementById('rkStatus').value,
+        notes: document.getElementById('rkNotes').value.trim(),
+        createdAt: Date.now()
+      };
+      if(!rec.area || !rec.category){ alert('Area dan Kategori wajib diisi'); return; }
+      btnAdd.disabled = true;
+      const newRef = db.ref(DB_RISKS).push();
+      Promise.resolve(firebase.auth().currentUser || firebase.auth().signInAnonymously())
+        .then(function(){ return newRef.set(rec); })
+        .then(function(){
+          riskDraft = {};
+          showAlert('Risk tersimpan ke Firebase');
+          renderCurrentTab();
+        })
+        .catch(function(err){
+          console.error('Risk save failed:', err);
+          alert('GAGAL MENYIMPAN RISK KE FIREBASE.\n\n' + (err && err.message ? err.message : err) + '\n\nData form TIDAK dihapus. Periksa koneksi/Firebase Rules lalu coba lagi.');
+        })
+        .finally(function(){ btnAdd.disabled = false; });
+    });
+    document.querySelectorAll('[data-act="delete-risk"]').forEach(function(b){ b.addEventListener('click', function(){
+      const key=b.getAttribute('data-key');
+      const merged=risksArr().find(function(x){return x._key===key;});
+      if(!merged){ alert('Data risk tidak ditemukan.'); return; }
+      const status=merged.openStatus||'OPEN';
+      if(!confirm('HAPUS RISK '+key+'?\\n\\nStatus: '+status+'\\nLevel: '+(merged.riskLevel||'N/A')+'\\n\\nData risk akan dihapus permanen dan tidak dapat dibatalkan.\\n\\nTekan OK untuk menghapus.')) return;
+      b.disabled=true;
+      try{
+        const loc=JSON.parse(localStorage.getItem('__mgmt_risks__')||'{}');
+        if(loc[key]){ delete loc[key]; localStorage.setItem('__mgmt_risks__',JSON.stringify(loc)); }
+      }catch(e){}
+      if(String(key).indexOf('local_')===0){
+        delete risksCache[key];
+        showAlert && showAlert('🗑 Risk berhasil dihapus dari perangkat');
+        renderRisk();
+        return;
+      }
+      try{
+        db.ref(DB_RISKS).child(key).remove().then(function(){
+          delete risksCache[key];
+          showAlert && showAlert('🗑 Risk berhasil dihapus permanen');
+          renderRisk();
+        }).catch(function(err){
+          b.disabled=false;
+          alert('Gagal menghapus risk dari Firebase: '+(err&&err.message?err.message:err));
+          renderRisk();
+        });
+      }catch(err){
+        b.disabled=false;
+        alert('Firebase belum siap: '+(err&&err.message?err.message:err));
+      }
+    }); });
+
+  }
+
+  /* ================================================================ */
+  /* RENDER: OFFICER PERFORMANCE                                      */
+  /* ================================================================ */
+  function renderOfficer(){
+    const perf = computeOfficerPerformance();
+    let html = '<div class="mgmt-section-title">OFFICER PERFORMANCE (berdasarkan data nyata)</div>';
+    if(perf.length===0){ html += '<div class="na">Belum ada data petugas.</div>'; document.getElementById('mpanel-officer').innerHTML = html; return; }
+    perf.sort(function(a,b){ const ca=isNum(a.compliance)?a.compliance:-1, cb=isNum(b.compliance)?b.compliance:-1; return cb-ca; });
+    html += '<table class="mgmt-table"><thead><tr><th>#</th><th>Petugas</th><th>Area</th><th>Status</th><th>Compliance</th><th>Missed CP</th><th>Incident Response</th><th>Panic Response</th><th>Distance</th><th>Anomaly</th></tr></thead><tbody>';
+    perf.forEach(function(p,idx){
+      const rankCls = idx===0 ? 'rank-1' : (idx===perf.length-1 && perf.length>1 ? 'rank-last' : '');
+      html += '<tr><td class="'+rankCls+'">'+(idx+1)+'</td><td>'+esc(p.name)+'</td><td>'+esc(p.area)+'</td><td>'+(p.online?'🟢 Online':'🔴 Offline')+'</td><td>'+pctStr(p.compliance)+'</td><td>'+(p.total>0?p.missed:N)+'</td><td>'+p.incidentResponse+'</td><td>'+p.panicResponse+'</td><td>'+(isNum(p.distanceKm)?p.distanceKm.toFixed(2)+' km':N)+'</td><td>'+p.anomalyCount+'</td></tr>';
+    });
+    html += '</tbody></table>';
+    document.getElementById('mpanel-officer').innerHTML = html;
+  }
+
+  /* ================================================================ */
+  /* RENDER: AREA PERFORMANCE                                         */
+  /* ================================================================ */
+  function renderArea(){
+    const areas = computeAreaPerformance();
+    let html = '<div class="mgmt-section-title">AREA SECURITY PERFORMANCE</div>';
+    if(areas.length===0){ html += '<div class="na">Belum ada data area.</div>'; document.getElementById('mpanel-area').innerHTML = html; return; }
+    html += '<table class="mgmt-table"><thead><tr><th>Area</th><th>Petugas</th><th>Compliance</th><th>Missed CP</th><th>Incident</th><th>Risk Level</th><th>Last Patrol</th></tr></thead><tbody>';
+    areas.sort(function(a,b){ const ca=isNum(a.compliance)?a.compliance:999, cb=isNum(b.compliance)?b.compliance:999; return ca-cb; }).forEach(function(a){
+      html += '<tr><td>'+esc(a.area)+'</td><td>'+a.officerCount+'</td><td>'+pctStr(a.compliance)+'</td><td>'+a.missed+'</td><td>'+a.incidents+'</td><td>'+badgeSeverity(a.riskLevel)+'</td><td>'+(a.lastPatrol?fmtDate(a.lastPatrol):N)+'</td></tr>';
+    });
+    html += '</tbody></table>';
+    document.getElementById('mpanel-area').innerHTML = html;
+  }
+
+  /* ================================================================ */
+  /* RENDER: ALERT CENTER                                             */
+  /* ================================================================ */
+  function renderAlerts(){
+    const alerts = buildPriorityAlerts();
+    let html = '<div class="mgmt-section-title">SECURITY ALERT CENTER — Diurutkan berdasarkan Severity</div>';
+    if(alerts.length===0){ html += '<div class="na">✅ Tidak ada alert aktif. Kondisi aman.</div>'; }
+    else {
+      html += alerts.map(function(a){
+        return '<div class="alert-priority-row p-'+a.level.toLowerCase()+'"><div>'+a.icon+'</div><div><div class="ap-title">'+esc(a.title)+'</div><div class="ap-meta">'+esc(a.meta)+'</div></div></div>';
+      }).join('');
+    }
+    document.getElementById('mpanel-alerts').innerHTML = html;
+  }
+
+  /* ---------------- TAB SWITCHING ---------------- */
+  function renderCurrentTab(){
+    if(execViewOn){ renderExecView(); return; }
+    if(currentMTab==='exec') renderExec();
+    else if(currentMTab==='compliance') renderCompliance();
+    else if(currentMTab==='incidents') renderIncidents();
+    else if(currentMTab==='risk') renderRisk();
+    else if(currentMTab==='officer') renderOfficer();
+    else if(currentMTab==='area') renderArea();
+    else if(currentMTab==='alerts') renderAlerts();
+  }
+  mgmtTabs.forEach(function(tab){
+    tab.addEventListener('click', function(){
+      if(execViewOn) return;
+      mgmtTabs.forEach(function(t){ t.classList.remove('active'); });
+      tab.classList.add('active');
+      document.querySelectorAll('.mgmt-panel').forEach(function(p){ p.classList.remove('active'); });
+      currentMTab = tab.getAttribute('data-mtab');
+      document.getElementById('mpanel-'+currentMTab).classList.add('active');
+      renderCurrentTab();
+    });
+  });
+
+  /* ---------------- EXECUTIVE VIEW MODE ---------------- */
+  function renderExecView(){
+    const status = computeSecurityStatus();
+    const score = computeSecurityScore();
+    const ops = computeOperationalStatus();
+    const alerts = buildPriorityAlerts();
+    const areaPerf = computeAreaPerformance().filter(function(a){return a.total>0 || a.incidents>0;});
+    const trend = computeIncidentTrend();
+    const statusLabel = {GREEN:'GREEN — NORMAL', AMBER:'AMBER — PERLU PERHATIAN', RED:'RED — KRITIKAL', NA:'BELUM ADA DATA'}[status];
+    let html = '<div class="exec-status-banner status-'+status+'"><div class="exec-status-dot"></div><div><div class="exec-status-text">SECURITY STATUS: '+statusLabel+'</div>';
+    html += '<div class="exec-status-sub">Untuk Head of Security — ringkasan tanpa detail teknis</div></div></div>';
+    html += '<div class="kpi-grid">';
+    function kpi(label,val,cls){ return '<div class="kpi-card'+(cls?' '+cls:'')+'"><div class="kpi-label">'+label+'</div><div class="kpi-value">'+val+'</div></div>'; }
+    html += kpi('Overall Security Score', isNum(score)?score+'/100':N);
+    html += kpi('Patrol Compliance', pctStr(ops.checkpointCompliance));
+    html += kpi('Incident Status', ops.openIncident+' Open / '+ops.criticalIncident+' Critical');
+    html += kpi('Risk Status', openRisks().length+' Open Risk');
+    html += kpi('Officer Availability', ops.total? ops.online+'/'+ops.total+' Online' : N);
+    html += kpi('Critical Alerts', alerts.filter(function(a){return a.level==='CRITICAL';}).length);
+    html += '</div>';
+    html += '<div class="mgmt-section-title">TOP 5 ISSUES</div>';
+    html += alerts.length? ('<ul class="mini-list">'+alerts.slice(0,5).map(function(a){return '<li>'+a.icon+' <b>'+esc(a.title)+'</b> — '+esc(a.meta)+'</li>';}).join('')+'</ul>') : '<div class="na">Tidak ada issue aktif.</div>';
+    html += '<div class="mgmt-section-title">TOP RISK AREAS</div>';
+    html += areaPerf.length? ('<ul class="mini-list">'+areaPerf.sort(function(a,b){return (a.compliance||100)-(b.compliance||100);}).slice(0,5).map(function(a){return '<li>📍 <b>'+esc(a.area)+'</b> — Compliance '+pctStr(a.compliance)+', Incident '+a.incidents+'</li>';}).join('')+'</ul>') : '<div class="na">Belum ada data area.</div>';
+    html += '<div class="mgmt-section-title">TREND</div><div class="kpi-grid">'+kpi('Incident Trend', trend.trend)+'</div>';
+    document.getElementById('mpanel-exec').innerHTML = html;
+    document.querySelectorAll('.mgmt-panel').forEach(function(p){ p.classList.remove('active'); });
+    document.getElementById('mpanel-exec').classList.add('active');
+  }
+
+  btnExecView.addEventListener('click', function(){
+    execViewOn = !execViewOn;
+    btnExecView.textContent = 'Executive View: ' + (execViewOn ? 'ON' : 'OFF');
+    document.getElementById('mgmtTabs').style.display = execViewOn ? 'none' : 'flex';
+    renderCurrentTab();
+  });
+
+  /* ---------------- MANAGEMENT REPORT ---------------- */
+  function generateReportText(){
+    const ops = computeOperationalStatus();
+    const score = computeSecurityScore();
+    const status = computeSecurityStatus();
+    const resp = computeResponsePerformance();
+    const trend = computeIncidentTrend();
+    const officerPerf = computeOfficerPerformance().filter(function(p){return p.total>0;}).sort(function(a,b){return b.compliance-a.compliance;});
+    const areaPerf = computeAreaPerformance();
+    const alerts = buildPriorityAlerts();
+    const risks = risksArr();
+    const lines = [];
+    lines.push('MANAGEMENT REPORT — SECURITY OPERATIONS');
+    lines.push('Digenerate: ' + new Date().toLocaleString('id-ID'));
+    lines.push('==============================================');
+    lines.push('');
+    lines.push('1. SECURITY STATUS: ' + status + ' | Overall Security Score: ' + (isNum(score)?score+'/100':N));
+    lines.push('');
+    lines.push('2. PATROL PERFORMANCE');
+    lines.push('   Total Petugas: ' + ops.total + ' | Online: ' + ops.online + ' | Offline: ' + ops.offline);
+    lines.push('   Patrol Completed: ' + ops.completedPatrol + ' | Incomplete: ' + ops.incompletePatrol);
+    lines.push('   Checkpoint Compliance: ' + pctStr(ops.checkpointCompliance) + ' | Missed Checkpoint: ' + (ops.withCp?ops.missedCheckpoint:N));
+    lines.push('');
+    lines.push('3. INCIDENT SUMMARY');
+    lines.push('   Open Incident: ' + ops.openIncident + ' | Critical Incident: ' + ops.criticalIncident);
+    lines.push('   Trend (7 hari vs 7 hari sebelumnya): ' + trend.last7 + ' vs ' + trend.prev7 + ' — ' + trend.trend);
+    lines.push('   Top Problem Area: ' + trend.topArea + ' | Top Category: ' + trend.topCat);
+    lines.push('   Avg Response Time: ' + fmtDur(resp.avgResponse) + ' | Avg Resolution Time: ' + fmtDur(resp.avgResolution));
+    lines.push('');
+    const fk = computeFindingKpis();
+    lines.push('3b. FINDING LIFECYCLE');
+    lines.push('   Open Findings: ' + fk.openFindings + ' | Overdue Findings: ' + fk.overdueFindings + ' | Reopened Findings: ' + fk.reopenedFindings);
+    lines.push('   Avg Acknowledge Time: ' + fmtDur(fk.avgAcknowledgeTime) + ' | Avg Repair Time: ' + fmtDur(fk.avgRepairTime) + ' | Avg Closure Time: ' + fmtDur(fk.avgClosureTime));
+    lines.push('');
+    lines.push('4. RISK SUMMARY');
+    lines.push('   Total Risk Tercatat: ' + risks.length + ' | Open Risk: ' + openRisks().length);
+    lines.push('   Critical Risk: ' + risks.filter(function(r){return r.riskLevel==='CRITICAL';}).length + ' | High Risk: ' + risks.filter(function(r){return r.riskLevel==='HIGH';}).length);
+    lines.push('');
+    lines.push('5. OFFICER PERFORMANCE (Top 5 & Bottom 3 by Compliance)');
+    officerPerf.slice(0,5).forEach(function(p){ lines.push('   + ' + p.name + ' — ' + pctStr(p.compliance) + ' (Area: ' + p.area + ')'); });
+    if(officerPerf.length>5){ lines.push('   ...'); officerPerf.slice(-3).forEach(function(p){ lines.push('   - ' + p.name + ' — ' + pctStr(p.compliance) + ' (Area: ' + p.area + ')'); }); }
+    if(officerPerf.length===0) lines.push('   ' + N);
+    lines.push('');
+    lines.push('6. AREA PERFORMANCE');
+    areaPerf.forEach(function(a){ lines.push('   ' + a.area + ': Compliance ' + pctStr(a.compliance) + ', Incident ' + a.incidents + ', Missed CP ' + a.missed); });
+    lines.push('');
+    lines.push('7. CRITICAL ALERTS (' + alerts.filter(function(a){return a.level==='CRITICAL';}).length + ')');
+    alerts.filter(function(a){return a.level==='CRITICAL';}).forEach(function(a){ lines.push('   - ' + a.title + ' — ' + a.meta); });
+    if(alerts.filter(function(a){return a.level==='CRITICAL';}).length===0) lines.push('   Tidak ada critical alert saat ini.');
+    lines.push('');
+    lines.push('8. RECOMMENDATIONS & CORRECTIVE ACTIONS');
+    const recs = [];
+    if(isNum(ops.checkpointCompliance) && ops.checkpointCompliance<80) recs.push('Tingkatkan pengawasan checkpoint compliance — saat ini di bawah 80%.');
+    if(ops.criticalIncident>0) recs.push('Prioritaskan penanganan ' + ops.criticalIncident + ' critical incident yang masih terbuka.');
+    if(ops.activePanic>0) recs.push('Tindak lanjuti ' + ops.activePanic + ' panic alert yang masih aktif segera.');
+    if(openRisks().filter(function(r){return r.riskLevel==='CRITICAL';}).length>0) recs.push('Mitigasi segera risk level CRITICAL yang masih open.');
+    if(ops.offline>0 && ops.total>0) recs.push('Periksa ' + ops.offline + ' petugas yang saat ini offline.');
+    if(recs.length===0) recs.push('Tidak ada tindakan mendesak — kondisi security dalam batas normal berdasarkan data yang tersedia.');
+    recs.forEach(function(r){ lines.push('   - ' + r); });
+    lines.push('');
+    lines.push('==============================================');
+    lines.push('Catatan: Seluruh angka dihitung otomatis dari data Firebase (patrol, checkpoint, alerts, incidents, risks). N/A ditampilkan jika data belum tersedia — tidak ada data yang direkayasa.');
+    return lines.join('\n');
+  }
+
+  /* ---------------- MANAGEMENT REPORT EXPORT ---------------- */
+  function downloadBlob(filename, text, type){
+    const blob = new Blob([text], {type:type});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 1500);
+  }
+  if(btnMgmtReportTxt) btnMgmtReportTxt.addEventListener('click', function(){
+    downloadBlob('security_management_report_' + Date.now() + '.txt', generateReportText(), 'text/plain;charset=utf-8');
+  });
+  if(btnMgmtReportPdf) btnMgmtReportPdf.addEventListener('click', function(){
+    try{
+      const txt = generateReportText();
+      const J = window.jspdf && window.jspdf.jsPDF;
+      if(!J) throw new Error('jsPDF belum tersedia');
+      const doc = new J({orientation:'portrait', unit:'mm', format:'a4'});
+      const margin=14, pageW=210, pageH=297, maxW=pageW-margin*2;
+      doc.setFont('courier','bold'); doc.setFontSize(15); doc.text('SOCIP™', margin, 18);
+      doc.setFont('courier','normal'); doc.setFontSize(8); doc.text('Security Operations Command & Intelligence Platform', margin, 24);
+      doc.setFontSize(8); doc.text('Created By : Mbah Pri', margin, 29);
+      doc.setDrawColor(0,190,210); doc.line(margin,33,pageW-margin,33);
+      doc.setFont('courier','normal'); doc.setFontSize(8.5);
+      const lines = doc.splitTextToSize(txt, maxW);
+      let y=41;
+      lines.forEach(function(line){
+        if(y>pageH-15){ doc.addPage(); y=18; }
+        doc.text(String(line), margin, y); y+=4.2;
+      });
+      doc.save('security_management_report_' + Date.now() + '.pdf');
+    }catch(e){
+      console.error('Management PDF export failed',e);
+      alert('PDF gagal dibuat: ' + (e && e.message ? e.message : e));
+    }
+  });
+
+  /* ---------------- OPEN/CLOSE OVERLAY ---------------- */
+  btnOpenMgmt.addEventListener('click', function(){
+    overlay.style.display = 'flex';
+    renderCurrentTab();
+  });
+  btnCloseMgmt.addEventListener('click', function(){ overlay.style.display = 'none'; });
+  const btnCloseFindingDetail = document.getElementById('btnCloseFindingDetail');
+  if(btnCloseFindingDetail) btnCloseFindingDetail.addEventListener('click', function(){ document.getElementById('findingDetailModal').style.display = 'none'; });
+
+  /* auto-refresh saat overlay terbuka */
+  setInterval(function(){ if(overlay.style.display !== 'none') renderCurrentTab(); }, 15000);
+
+  console.log('✅ Security Operations Management & Command System engine attached (additive, fitur lama tetap utuh)');
+})();
+</script>
+
+<script>
+/* ================================================================
+   V9 SAVE HARDENING — MOBILE/FILE:// SAFE
+   Global capture handler: tidak bergantung pada handler render yang
+   bisa terganti oleh realtime re-render. Simpan lokal dahulu, lalu
+   sinkronkan Firebase bila tersedia.
+================================================================ */
+(function(){
+  'use strict';
+  var INC_KEY='__mgmt_incidents__', RISK_KEY='__mgmt_risks__';
+  function get(k){try{return JSON.parse(localStorage.getItem(k)||'{}')||{};}catch(e){return {};}}
+  function put(k,v){try{localStorage.setItem(k,JSON.stringify(v));return true;}catch(e){return false;}}
+  function notify(msg){
+    try{ if(typeof showAlert==='function') showAlert(msg); }catch(e){}
+    try{ console.log('[V9 SAVE]',msg); }catch(e){}
+  }
+  function authReady(){
+    return new Promise(function(resolve){
+      try{
+        var a=firebase.auth();
+        if(a.currentUser){resolve(a.currentUser);return;}
+        var done=false;
+        var unsub=a.onAuthStateChanged(function(u){if(!done){done=true;try{unsub();}catch(e){} resolve(u);}});
+        try{a.signInAnonymously().catch(function(){ if(!done){done=true;try{unsub();}catch(e){} resolve(null);}});}catch(e){resolve(null);}
+        setTimeout(function(){if(!done){done=true;try{unsub();}catch(e){} resolve(a.currentUser||null);}},5000);
+      }catch(e){resolve(null);}
+    });
+  }
+  function saveIncident(btn){
+    notify('⏳ Menyimpan Incident...');
+    var q=function(id){return document.getElementById(id);};
+    var areaSel=q('inArea');
+    var area=(areaSel&&areaSel.value==='__CUSTOM__')?(q('inAreaCustom')?q('inAreaCustom').value.trim():''):(areaSel?areaSel.value:'');
+    var desc=q('inDesc')?q('inDesc').value.trim():'';
+    var cat=q('inCategory')?q('inCategory').value:'';
+    if(!area||!cat||!desc){ alert('Area, Kategori, dan Deskripsi wajib diisi'); return; }
+    var now=Date.now(), key='local_'+now+'_'+Math.random().toString(36).slice(2,7);
+    var rec={location:q('inLocation')?q('inLocation').value.trim():'',area:area,category:cat,
+      severity:q('inSeverity')?q('inSeverity').value:'LOW',reporter:q('inReporter')?q('inReporter').value.trim():'',
+      assignedOfficer:q('inAssigned')?q('inAssigned').value.trim():'',targetDate:q('inTargetDate')?q('inTargetDate').value||null:null,
+      status:'NEW',rootCause:q('inRootCause')?q('inRootCause').value.trim():'',correctiveAction:q('inCorrective')?q('inCorrective').value.trim():'',
+      evidence:q('inEvidence')?q('inEvidence').value.trim():'',description:desc,reportedAt:now,
+      timeline:{local:{status:'NEW',timestamp:now,actor:(q('inReporter')?q('inReporter').value.trim():'')||'System',note:'Finding reported',evidence:(q('inEvidence')?q('inEvidence').value.trim():'')}}};
+    var loc=get(INC_KEY); loc[key]=rec; put(INC_KEY,loc);
+    try{btn.disabled=true;}catch(e){}
+    var sync=authReady().then(function(u){
+      if(!u) throw new Error('Firebase Auth belum tersedia');
+      var ref=db.ref('/incidents').push();
+      var clean=Object.assign({},rec); delete clean.timeline;
+      var updates={}; updates[ref.key]=clean; updates[ref.key+'/timeline']=rec.timeline;
+      return db.ref('/incidents').update(updates).then(function(){
+        delete loc[key]; put(INC_KEY,loc); return true;
+      });
+    });
+    sync.then(function(){notify('✅ Incident tersimpan ke Firebase'); if(typeof incidentDraft!=='undefined') incidentDraft={}; renderCurrentTab();})
+      .catch(function(e){notify('⚠️ Incident tersimpan di perangkat (Firebase belum tersambung)'); if(typeof incidentDraft!=='undefined') incidentDraft={}; renderCurrentTab(); console.warn('[V9 Firebase]',e);})
+      .finally(function(){try{btn.disabled=false;}catch(e){}});
+  }
+  function saveRisk(btn){
+    notify('⏳ Menyimpan Risk...');
+    var q=function(id){return document.getElementById(id);}; var areaSel=q('rkArea');
+    var area=(areaSel&&areaSel.value==='__CUSTOM__')?(q('rkAreaCustom')?q('rkAreaCustom').value.trim():''):(areaSel?areaSel.value:'');
+    var cat=q('rkCategory')?q('rkCategory').value:'';
+    if(!area||!cat){alert('Area dan Kategori wajib diisi');return;}
+    var now=Date.now(),key='local_'+now+'_'+Math.random().toString(36).slice(2,7);
+    var rec={category:cat,area:area,riskLevel:q('rkLevel')?q('rkLevel').value:'LOW',frequency:q('rkFreq')?q('rkFreq').value.trim():'',trend:q('rkTrend')?q('rkTrend').value:'Stable',openStatus:q('rkStatus')?q('rkStatus').value:'OPEN',notes:q('rkNotes')?q('rkNotes').value.trim():'',createdAt:now};
+    var loc=get(RISK_KEY);loc[key]=rec;put(RISK_KEY,loc);try{btn.disabled=true;}catch(e){}
+    authReady().then(function(u){if(!u)throw new Error('Firebase Auth belum tersedia');var ref=db.ref('/risks').push();return ref.set(rec).then(function(){delete loc[key];put(RISK_KEY,loc);});})
+      .then(function(){notify('✅ Risk tersimpan ke Firebase');if(typeof riskDraft!=='undefined')riskDraft={};renderCurrentTab();})
+      .catch(function(e){notify('⚠️ Risk tersimpan di perangkat (Firebase belum tersambung)');if(typeof riskDraft!=='undefined')riskDraft={};renderCurrentTab();console.warn('[V9 Firebase]',e);})
+      .finally(function(){try{btn.disabled=false;}catch(e){}});
+  }
+  document.addEventListener('click',function(ev){
+    var t=ev.target&&ev.target.closest?ev.target.closest('#btnAddIncident,#btnAddRisk'):null;
+    if(!t)return;
+    ev.preventDefault(); ev.stopImmediatePropagation();
+    if(t.id==='btnAddIncident')saveIncident(t); else saveRisk(t);
+  },true);
+  document.addEventListener('DOMContentLoaded',function(){
+    try{
+      var st=document.createElement('style');st.textContent='#btnAddIncident,#btnAddRisk{touch-action:manipulation;pointer-events:auto!important;cursor:pointer}';document.head.appendChild(st);
+    }catch(e){}
+  });
+})();
+</script>
+
+<!-- ============== END MANAGEMENT ENGINE ============== -->
+
+
+<script>
+
+/* ================================================================
+   SOCIP™ v16 — OPERATIONS MENU CONTROLLER
+================================================================ */
+(function initSocipOperationsMenu(){
+  'use strict';
+  const menu=document.getElementById('socipOpsMenu');
+  const dim=document.getElementById('socipMenuDim');
+  const trigger=document.getElementById('socipMenuTrigger');
+  const close=document.getElementById('socipMenuClose');
+  if(!menu||!dim||!trigger||!close) return;
+  function openMenu(){
+    menu.classList.add('open'); dim.classList.add('open');
+    trigger.setAttribute('aria-expanded','true'); menu.setAttribute('aria-hidden','false');
+  }
+  function closeMenu(){
+    menu.classList.remove('open'); dim.classList.remove('open');
+    trigger.setAttribute('aria-expanded','false'); menu.setAttribute('aria-hidden','true');
+  }
+  trigger.addEventListener('click',openMenu);
+  close.addEventListener('click',closeMenu);
+  dim.addEventListener('click',closeMenu);
+  document.addEventListener('keydown',function(e){ if(e.key==='Escape') closeMenu(); });
+  function clickMainTab(name){
+    const tab=document.querySelector('.tab[data-tab="'+name+'"]');
+    if(tab) tab.click();
+  }
+  document.querySelectorAll('[data-socip-action]').forEach(function(btn){
+    btn.addEventListener('click',function(){
+      const action=btn.getAttribute('data-socip-action');
+      closeMenu();
+      if(action==='tab-monitor'){ clickMainTab('monitor'); window.scrollTo({top:0,behavior:'smooth'}); return; }
+      if(action==='tab-manual'){ clickMainTab('manual'); window.scrollTo({top:0,behavior:'smooth'}); return; }
+      if(action==='cleanup'){ clickMainTab('cleanup'); window.scrollTo({top:0,behavior:'smooth'}); return; }
+      if(action==='map'){ const el=document.getElementById('mapPanel'); if(el) el.scrollIntoView({behavior:'smooth',block:'start'}); return; }
+      if(action==='replay'){ clickMainTab('monitor'); setTimeout(function(){ const el=document.getElementById('startReplay'); if(el) el.scrollIntoView({behavior:'smooth',block:'center'}); },80); return; }
+      if(action==='management'){
+        const b=document.getElementById('btnOpenMgmt'); if(b) b.click(); return;
+      }
+      if(action==='finding'){
+        const b=document.getElementById('btnOpenMgmt'); if(b) b.click();
+        setTimeout(function(){ const t=document.querySelector('.mgmt-tab[data-mtab="incidents"]'); if(t) t.click(); },120); return;
+      }
+      if(action==='risk'){
+        const b=document.getElementById('btnOpenMgmt'); if(b) b.click();
+        setTimeout(function(){ const t=document.querySelector('.mgmt-tab[data-mtab="risk"]'); if(t) t.click(); },120); return;
+      }
+      if(action==='alerts'){
+        const b=document.getElementById('btnOpenMgmt'); if(b) b.click();
+        setTimeout(function(){ const t=document.querySelector('.mgmt-tab[data-mtab="alerts"]'); if(t) t.click(); },120); return;
+      }
+      if(action==='report'){
+        const b=document.getElementById('btnOpenMgmt'); if(b) b.click();
+        setTimeout(function(){ const r=document.getElementById('btnMgmtReportPdf'); if(r) r.click(); },180); return;
+      }
+    });
+  });
+  console.log('✅ SOCIP™ Operations Menu attached');
+})();
+
+</script>
+</body>
+</html>
